@@ -396,6 +396,10 @@ export const upload = async (options: UploadOptions, isPublicAPI?: boolean, url?
     xhr.responseType = 'json'
     xhr.onreadystatechange = function () {
       if (xhr.readyState === 4) {
+        console.debug('[upload] completed', {
+          status: xhr.status,
+          url: options.url,
+        })
         if (xhr.status === 201)
           resolve(xhr.response)
         else

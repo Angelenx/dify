@@ -5,6 +5,7 @@
 # ==================================================================
 
 x-shared-env: &shared-api-worker-env
+  NUMEXPR_MAX_THREADS: ${NUMEXPR_MAX_THREADS:-16}
   CONSOLE_API_URL: ${CONSOLE_API_URL:-}
   CONSOLE_WEB_URL: ${CONSOLE_WEB_URL:-}
   SERVICE_API_URL: ${SERVICE_API_URL:-}
@@ -816,7 +817,11 @@ services:
 
   # Frontend web application.
   web:
-    image: langgenius/dify-web:1.11.4
+    # image: langgenius/dify-web:1.11.4
+    image: dify-web:1.11.4
+    build:
+      context: ../web
+      dockerfile: Dockerfile
     restart: always
     environment:
       CONSOLE_API_URL: ${CONSOLE_API_URL:-}
@@ -1124,9 +1129,9 @@ services:
       # Mount the Weaviate data directory to the con tainer.
       - ./volumes/weaviate:/var/lib/weaviate
       - ./volumes/weaviate_backups:/var/lib/weaviate/backups
-    ports:
-    - "8082:8080"
-    - "50051:50051"
+    # ports:
+    # - "8082:8080"
+    # - "50051:50051"
     environment:
       # The Weaviate configurations
       # You can refer to the [Weaviate](https://weaviate.io/developers/weaviate/config-refs/env-vars) documentation for more information.
@@ -1144,6 +1149,8 @@ services:
       ENABLE_TOKENIZER_GSE: ${WEAVIATE_ENABLE_TOKENIZER_GSE:-false}
       ENABLE_TOKENIZER_KAGOME_JA: ${WEAVIATE_ENABLE_TOKENIZER_KAGOME_JA:-false}
       ENABLE_TOKENIZER_KAGOME_KR: ${WEAVIATE_ENABLE_TOKENIZER_KAGOME_KR:-false}
+      ENABLE_MODULES: backup-filesystem
+      BACKUP_FILESYSTEM_PATH: /var/lib/weaviate/backups
 
   # OceanBase vector database
   oceanbase:

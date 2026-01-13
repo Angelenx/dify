@@ -53,10 +53,18 @@ export const fileUpload: FileUpload = ({
 }, isPublic, url) => {
   const formData = new FormData()
   formData.append('file', file)
+  console.debug('[fileUpload] start', {
+    name: file.name,
+    size: file.size,
+    type: file.type,
+    url,
+    isPublic,
+  })
   const onProgress = (e: ProgressEvent) => {
     if (e.lengthComputable) {
       const percent = Math.floor(e.loaded / e.total * 100)
       onProgressCallback(percent)
+      console.debug('[fileUpload] progress', { name: file.name, percent })
     }
   }
 
@@ -169,12 +177,28 @@ export const getSupportFileType = (fileName: string, fileMimetype: string, isCus
 }
 
 export const getProcessedFiles = (files: FileEntity[]) => {
-  return files.filter(file => file.progress !== -1).map(fileItem => ({
-    type: fileItem.supportFileType,
-    transfer_method: fileItem.transferMethod,
-    url: fileItem.url || '',
-    upload_file_id: fileItem.uploadedId || '',
-  }))
+  const processed = files
+    .filter(file => file.progress !== -1)
+    .map((fileItem) => {
+      if (fileItem.transferMethod === TransferMethod.local_file && !fileItem.uploadedId) {
+        console.warn('[fileUploader] missing uploadedId before submit', {
+          id: fileItem.id,
+          name: fileItem.name,
+          progress: fileItem.progress,
+          transferMethod: fileItem.transferMethod,
+        })
+      }
+
+      return {
+        type: fileItem.supportFileType,
+        transfer_method: fileItem.transferMethod,
+        url: fileItem.url || '',
+        upload_file_id: fileItem.uploadedId || '',
+      }
+    })
+
+  console.debug('[fileUploader] getProcessedFiles output', processed)
+  return processed
 }
 
 export const getProcessedFilesFromResponse = (files: FileResponse[]) => {

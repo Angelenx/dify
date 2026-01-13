@@ -125,6 +125,14 @@ export const useFile = (fileConfig: FileUpload, noNeedToCheckEnable = true) => {
       setFiles,
     } = fileStore.getState()
 
+    console.debug('[fileUploader] handleAddFile', {
+      id: newFile.id,
+      name: newFile.name,
+      size: newFile.size,
+      transferMethod: newFile.transferMethod,
+      existingIds: files.map(file => file.id),
+    })
+
     const newFiles = produce(files, (draft) => {
       draft.push(newFile)
     })
@@ -137,11 +145,19 @@ export const useFile = (fileConfig: FileUpload, noNeedToCheckEnable = true) => {
       setFiles,
     } = fileStore.getState()
 
+    console.debug('[fileUploader] handleUpdateFile before', {
+      incomingId: newFile.id,
+      incomingUploadedId: newFile.uploadedId,
+      storeIds: files.map(file => file.id),
+    })
+
     const newFiles = produce(files, (draft) => {
       const index = draft.findIndex(file => file.id === newFile.id)
 
       if (index > -1)
         draft[index] = newFile
+      else
+        console.warn('[fileUploader] handleUpdateFile missed id', { incomingId: newFile.id, draftLength: draft.length })
     })
     setFiles(newFiles)
   }, [fileStore])
