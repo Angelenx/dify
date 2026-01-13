@@ -15,6 +15,11 @@ const FileInput = ({
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const targetFiles = e.target.files
 
+    console.debug('[fileUploader] handleChange', {
+      count: targetFiles?.length || 0,
+      names: targetFiles ? Array.from(targetFiles).map(f => f.name) : [],
+    })
+
     if (targetFiles) {
       if (fileConfig.number_limits) {
         for (let i = 0; i < targetFiles.length; i++) {

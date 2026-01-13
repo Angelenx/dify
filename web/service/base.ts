@@ -348,13 +348,22 @@ export const upload = async (options: any, isPublicAPI?: boolean, url?: string, 
     xhr.responseType = 'json'
     xhr.onreadystatechange = function () {
       if (xhr.readyState === 4) {
+        console.debug('[upload] completed', {
+          status: xhr.status,
+          url: options.url,
+        })
         if (xhr.status === 201)
           resolve(xhr.response)
         else
           reject(xhr)
       }
     }
-    xhr.upload.onprogress = options.onprogress
+    xhr.upload.onprogress = (event) => {
+      options.onprogress?.(event)
+      if (event.lengthComputable)
+        console.debug('[upload] progress', { loaded: event.loaded, total: event.total })
+    }
+    console.debug('[upload] start', { url: options.url, method: options.method })
     xhr.send(options.data)
   })
 }

@@ -5,6 +5,7 @@
 # ==================================================================
 
 x-shared-env: &shared-api-worker-env
+  NUMEXPR_MAX_THREADS: ${NUMEXPR_MAX_THREADS:-16}
   CONSOLE_API_URL: ${CONSOLE_API_URL:-}
   CONSOLE_WEB_URL: ${CONSOLE_WEB_URL:-}
   SERVICE_API_URL: ${SERVICE_API_URL:-}
@@ -624,6 +625,8 @@ services:
     networks:
       - ssrf_proxy_network
       - default
+    ports:
+      - "${EXPOSE_API_PORT:-5001}:${DIFY_PORT:-5001}"
 
   # worker service
   # The Celery worker for processing the queue.
@@ -673,7 +676,11 @@ services:
 
   # Frontend web application.
   web:
-    image: langgenius/dify-web:1.9.1
+    # image: langgenius/dify-web:1.9.1
+    image: dify-web:local
+    build:
+      context: ../web
+      dockerfile: Dockerfile
     restart: always
     environment:
       CONSOLE_API_URL: ${CONSOLE_API_URL:-}
