@@ -238,3 +238,4 @@ scripts/stress-test/reports/
 
 # custom
 bak/
+docker/volumes/weaviate_backups/
