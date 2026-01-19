@@ -163,7 +163,7 @@ const FileUploadSetting: FC<Props> = ({
             <InputNumberWithSlider
               value={max_length}
               min={1}
-              max={88}
+              max={maxFileUploadLimit}
               onChange={handleMaxUploadNumLimitChange}
             />
           </div>
