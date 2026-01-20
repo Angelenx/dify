@@ -24,6 +24,12 @@ server {
       include proxy.conf;
     }
 
+    # Serve Swagger UI static assets from API service
+    location /swaggerui {
+      proxy_pass http://api:5001;
+      include proxy.conf;
+    }
+
     location /explore {
       proxy_pass http://web:3000;
       include proxy.conf;
