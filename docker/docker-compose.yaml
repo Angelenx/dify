@@ -1128,7 +1128,6 @@ services:
     volumes:
       # Mount the Weaviate data directory to the con tainer.
       - ./volumes/weaviate:/var/lib/weaviate
-      - ./volumes/weaviate_backups:/var/lib/weaviate/backups
     # ports:
     # - "8082:8080"
     # - "50051:50051"

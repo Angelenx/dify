@@ -236,7 +236,3 @@ scripts/stress-test/reports/
 # settings
 *.local.json
 *.local.md
-
-# custom
-bak/
-docker/volumes/weaviate_backups/
