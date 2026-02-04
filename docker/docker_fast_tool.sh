@@ -83,19 +83,18 @@ run() {
 # ------------------------------------------------------------------------------
 # Docker Compose Command
 # ------------------------------------------------------------------------------
-# --progress=plain: Show full build output (not TTY-fancy)
-DC="docker compose --progress=plain -p $PROJECT"
+DC="docker compose -p $PROJECT"
 
 # ------------------------------------------------------------------------------
 # Actions (executed in order: build -> redeploy -> log)
 # ------------------------------------------------------------------------------
 
-# Build images
+# Build images (--progress=plain shows full build output)
 if $BUILD; then
     if $CLEAN; then
-        run $DC build --no-cache
+        run $DC --progress=plain build --no-cache
     else
-        run $DC build
+        run $DC --progress=plain build
     fi
 fi
 
