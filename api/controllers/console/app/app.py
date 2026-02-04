@@ -12,7 +12,7 @@ from werkzeug.exceptions import BadRequest
 from controllers.common.helpers import FileInfo
 from controllers.common.schema import register_enum_models, register_schema_models
 from controllers.console import console_ns
-from controllers.console.app.wraps import get_app_model
+from controllers.console.app.wraps import get_app_model, edit_app_permission_required
 from controllers.console.workspace.models import LoadBalancingPayload
 from controllers.console.wraps import (
     account_initialization_required,
@@ -581,7 +581,7 @@ class AppApi(Resource):
     @login_required
     @account_initialization_required
     @get_app_model(mode=None)
-    @edit_permission_required
+    @edit_app_permission_required
     def put(self, app_model):
         """Update app"""
         args = UpdateAppPayload.model_validate(console_ns.payload)
@@ -610,7 +610,7 @@ class AppApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
-    @edit_permission_required
+    @edit_app_permission_required
     def delete(self, app_model):
         """Delete app"""
         app_service = AppService()
@@ -699,7 +699,7 @@ class AppNameApi(Resource):
     @login_required
     @account_initialization_required
     @get_app_model(mode=None)
-    @edit_permission_required
+    @edit_app_permission_required
     def post(self, app_model):
         args = AppNamePayload.model_validate(console_ns.payload)
 
@@ -721,7 +721,7 @@ class AppIconApi(Resource):
     @login_required
     @account_initialization_required
     @get_app_model(mode=None)
-    @edit_permission_required
+    @edit_app_permission_required
     def post(self, app_model):
         args = AppIconPayload.model_validate(console_ns.payload or {})
 
@@ -743,7 +743,7 @@ class AppSiteStatus(Resource):
     @login_required
     @account_initialization_required
     @get_app_model(mode=None)
-    @edit_permission_required
+    @edit_app_permission_required
     def post(self, app_model):
         args = AppSiteStatusPayload.model_validate(console_ns.payload)
 
@@ -799,13 +799,14 @@ class AppTraceApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
-    @edit_permission_required
-    def post(self, app_id):
+    @get_app_model(mode=None)
+    @edit_app_permission_required
+    def post(self, app_model):
         # add app trace
         args = AppTracePayload.model_validate(console_ns.payload)
 
         OpsTraceManager.update_app_tracing_config(
-            app_id=app_id,
+            app_id=str(app_model.id),
             enabled=args.enabled,
             tracing_provider=args.tracing_provider,
         )

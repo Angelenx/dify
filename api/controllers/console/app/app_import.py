@@ -20,6 +20,7 @@ from models.model import App
 from services.app_dsl_service import AppDslService, ImportStatus
 from services.enterprise.enterprise_service import EnterpriseService
 from services.feature_service import FeatureService
+from werkzeug.exceptions import Forbidden
 
 from .. import console_ns
 
@@ -69,6 +70,15 @@ class AppImportApi(Resource):
         # Check user role first
         current_user, _ = current_account_with_tenant()
         args = AppImportPayload.model_validate(console_ns.payload)
+
+        # If app_id provided (overwrite), only allow admin/owner or the original creator
+        if args.app_id:
+            stmt = db.session.query(App).where(App.id == args.app_id, App.tenant_id == current_user.current_tenant_id)
+            existing_app = stmt.first()
+            if not existing_app:
+                raise ValueError("App not found")
+            if not getattr(current_user, "is_admin_or_owner", False) and str(current_user.id) != str(existing_app.created_by):
+                raise Forbidden()
 
         # Create service with session
         with Session(db.engine) as session:

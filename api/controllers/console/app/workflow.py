@@ -13,7 +13,7 @@ import services
 from controllers.console import console_ns
 from controllers.console.app.error import ConversationCompletedError, DraftWorkflowNotExist, DraftWorkflowNotSync
 from controllers.console.app.workflow_run import workflow_run_node_execution_model
-from controllers.console.app.wraps import get_app_model
+from controllers.console.app.wraps import get_app_model, edit_app_permission_required
 from controllers.console.wraps import account_initialization_required, edit_permission_required, setup_required
 from controllers.web.error import InvokeRateLimitError as InvokeRateLimitHttpError
 from core.app.app_config.features.file_upload.manager import FileUploadConfigManager
@@ -649,7 +649,7 @@ class PublishedWorkflowApi(Resource):
     @login_required
     @account_initialization_required
     @get_app_model(mode=[AppMode.ADVANCED_CHAT, AppMode.WORKFLOW])
-    @edit_permission_required
+    @edit_app_permission_required
     def post(self, app_model: App):
         """
         Publish workflow

@@ -108,3 +108,42 @@ def get_app_model_with_trial(view: Callable[P, R] | None = None, *, mode: Union[
         return decorator
     else:
         return decorator(view)
+
+
+def edit_app_permission_required(f: Callable[P, R]):
+    """Decorator to require that the current user is either an admin/owner or the creator of the app.
+
+    This is intended for app modification endpoints. It expects the wrapped view to receive
+    `app_model` as a keyword argument (ensured by `get_app_model` decorator applied above).
+    """
+    @wraps(f)
+    def decorated(*args: P.args, **kwargs: P.kwargs):
+        from werkzeug.exceptions import Forbidden
+
+        from libs.login import current_user
+        from models import Account
+
+        user = current_user._get_current_object()  # type: ignore
+        if not isinstance(user, Account):
+            raise Forbidden()
+
+        if not current_user.has_edit_permission:
+            raise Forbidden()
+
+        app_model = kwargs.get("app_model", None)
+        if app_model is None:
+            # no app provided, deny
+            # raise Forbidden()
+            return f(*args, **kwargs)
+
+        # allow if admin/owner
+        if getattr(user, "is_admin_or_owner", False):
+            return f(*args, **kwargs)
+
+        # allow if user is creator
+        if getattr(user, "id", None) and str(user.id) == str(getattr(app_model, "created_by", None)):
+            return f(*args, **kwargs)
+
+        raise Forbidden()
+
+    return decorated

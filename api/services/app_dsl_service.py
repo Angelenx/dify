@@ -351,6 +351,24 @@ class AppDslService:
                 stmt = select(App).where(App.id == pending_data.app_id, App.tenant_id == account.current_tenant_id)
                 app = self._session.scalar(stmt)
 
+
+            # Permission check: if overwriting existing app, only admin/owner or original creator allowed
+            if pending_data.app_id and app is not None:
+                try:
+                    if not getattr(account, "is_admin_or_owner", False) and str(account.id) != str(app.created_by):
+                        return Import(
+                            id=import_id,
+                            status=ImportStatus.FAILED,
+                            error="Permission denied to overwrite app",
+                        )
+                except Exception:
+                    return Import(
+                        id=import_id,
+                        status=ImportStatus.FAILED,
+                        error="Permission check failed",
+                    )
+
+
             # Create or update app
             app = self._create_or_update_app(
                 app=app,

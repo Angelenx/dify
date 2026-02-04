@@ -288,7 +288,12 @@ class DatasetListApi(Resource):
     @enterprise_license_required
     def get(self):
         current_user, current_tenant_id = current_account_with_tenant()
-        query = ConsoleDatasetListQuery.model_validate(request.args.to_dict())
+        query_params: dict[str, str | list[str]] = dict(request.args.to_dict()) # Angelen 修复知识库报错
+        if "ids" in request.args:
+            query_params["ids"] = request.args.getlist("ids")
+        if "tag_ids" in request.args:
+            query_params["tag_ids"] = request.args.getlist("tag_ids")
+        query = ConsoleDatasetListQuery.model_validate(query_params)
         # provider = request.args.get("provider", default="vendor")
         if query.ids:
             datasets, total = DatasetService.get_datasets_by_ids(query.ids, current_tenant_id)
