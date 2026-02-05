@@ -242,6 +242,7 @@ conversation_fields_model = console_ns.model(
         "user_feedback_stats": fields.Nested(feedback_stat_model),
         "admin_feedback_stats": fields.Nested(feedback_stat_model),
         "message": fields.Nested(simple_message_detail_model, attribute="first_message"),
+        "is_deleted": fields.Boolean,
     },
 )
 
@@ -291,6 +292,7 @@ conversation_with_summary_model = console_ns.model(
         "user_feedback_stats": fields.Nested(feedback_stat_model),
         "admin_feedback_stats": fields.Nested(feedback_stat_model),
         "status_count": fields.Nested(status_count_model),
+        "is_deleted": fields.Boolean,
     },
 )
 
@@ -321,6 +323,7 @@ conversation_detail_model = console_ns.model(
         "message_count": fields.Integer,
         "user_feedback_stats": fields.Nested(feedback_stat_model),
         "admin_feedback_stats": fields.Nested(feedback_stat_model),
+        "is_deleted": fields.Boolean,
     },
 )
 
@@ -343,9 +346,10 @@ class CompletionConversationApi(Resource):
         current_user, _ = current_account_with_tenant()
         args = CompletionConversationQuery.model_validate(request.args.to_dict(flat=True))  # type: ignore
 
+        # Console queries include soft-deleted conversations so admins can view all logs
         query = sa.select(Conversation).where(
-            Conversation.app_id == app_model.id, Conversation.mode == "completion", Conversation.is_deleted.is_(False)
-        )
+            Conversation.app_id == app_model.id, Conversation.mode == "completion"
+            )
 
         if args.keyword:
             from libs.helper import escape_like_pattern
@@ -460,7 +464,8 @@ class ChatConversationApi(Resource):
             .subquery()
         )
 
-        query = sa.select(Conversation).where(Conversation.app_id == app_model.id, Conversation.is_deleted.is_(False))
+        # Console queries include soft-deleted conversations so admins can view all logs
+        query = sa.select(Conversation).where(Conversation.app_id == app_model.id)
 
         if args.keyword:
             from libs.helper import escape_like_pattern

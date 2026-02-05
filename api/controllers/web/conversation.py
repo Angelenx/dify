@@ -124,7 +124,7 @@ class ConversationListApi(WebApiResource):
 @web_ns.route("/conversations/<uuid:c_id>")
 class ConversationApi(WebApiResource):
     @web_ns.doc("Delete Conversation")
-    @web_ns.doc(description="Delete a specific conversation.")
+    @web_ns.doc(description="Soft-delete a specific conversation. The conversation is marked as deleted but preserved for admin review.")
     @web_ns.doc(params={"c_id": {"description": "Conversation UUID", "type": "string", "required": True}})
     @web_ns.doc(
         responses={
@@ -143,7 +143,8 @@ class ConversationApi(WebApiResource):
 
         conversation_id = str(c_id)
         try:
-            ConversationService.delete(app_model, conversation_id, end_user)
+            # Use soft_delete to preserve conversation for admin review
+            ConversationService.soft_delete(app_model, conversation_id, end_user)
         except ConversationNotExistsError:
             raise NotFound("Conversation Not Exists.")
         return ResultResponse(result="success").model_dump(mode="json"), 204

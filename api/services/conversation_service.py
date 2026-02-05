@@ -197,6 +197,38 @@ class ConversationService:
             raise e
 
     @classmethod
+    def soft_delete(cls, app_model: App, conversation_id: str, user: Union[Account, EndUser] | None):
+        """
+        Soft-delete a conversation by setting is_deleted=True.
+
+        Unlike hard delete, the conversation and its related data (messages, etc.) are preserved
+        in the database so that administrators can still view conversation logs in the console.
+        End users will no longer see the conversation in their list.
+
+        This method is intended for web frontend use only.
+        """
+        try:
+            logger.info(
+                "Initiating conversation soft-deletion for app_name %s, conversation_id: %s",
+                app_model.name,
+                conversation_id,
+            )
+
+            rows_updated = (
+                db.session.query(Conversation)
+                .where(Conversation.id == conversation_id)
+                .update({"is_deleted": True}, synchronize_session=False)
+            )
+            db.session.commit()
+
+            if rows_updated == 0:
+                logger.warning("No conversation found to soft-delete: %s", conversation_id)
+
+        except Exception as e:
+            db.session.rollback()
+            raise e
+
+    @classmethod
     def get_conversational_variable(
         cls,
         app_model: App,
