@@ -43,7 +43,7 @@ const FileInAttachmentItem = ({
   canPreview,
   previewMode = PreviewMode.CurrentPage,
 }: FileInAttachmentItemProps) => {
-  const { id, name, type = '', progress, supportFileType, base64Url, url, isRemote } = file
+  const { id, name, type, progress, supportFileType, base64Url, url, isRemote } = file
   const ext = getFileExtension(name, type, isRemote)
   const isImageFile = supportFileType === SupportUploadFileTypes.image
   const [imagePreviewUrl, setImagePreviewUrl] = useState('')

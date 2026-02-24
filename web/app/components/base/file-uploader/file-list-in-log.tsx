@@ -44,7 +44,7 @@ const FileListInLog = ({ fileList, isExpanded = false, noBorder = false, noPaddi
         {!expanded && (
           <div className="flex gap-1">
             {fullList.map((file) => {
-              const { id, name, type = '', supportFileType, base64Url, url } = file
+              const { id, name, type, supportFileType, base64Url, url } = file
               const isImageFile = supportFileType === SupportUploadFileTypes.image
               return (
                 <>
