@@ -1,6 +1,7 @@
 import type { ThoughtItem } from '@/app/components/base/chat/chat/type'
 import type { FileEntity } from '@/app/components/base/file-uploader/types'
 import type { VisionFile } from '@/types/app'
+import { getProcessedFilesFromResponse } from '@/app/components/base/file-uploader/utils'
 import { ToolTypeEnum } from '../../workflow/block-selector/types'
 
 export const getToolType = (type: string) => {
@@ -33,9 +34,12 @@ export const addFileInfos = (list: ThoughtItem[], messageFiles: (FileEntity | Vi
     return list
   return list.map((item) => {
     if (item.files && item.files?.length > 0) {
+      const matchedFiles = item.files
+        .map(fileId => messageFiles.find(file => file.id === fileId))
+        .filter(Boolean) as (FileEntity | VisionFile)[]
       return {
         ...item,
-        message_files: item.files.map(fileId => messageFiles.find(file => file.id === fileId)) as FileEntity[],
+        message_files: getProcessedFilesFromResponse(matchedFiles.map((f: any) => ({ ...f, related_id: f.id }))),
       }
     }
     return item

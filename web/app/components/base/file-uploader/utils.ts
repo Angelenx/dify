@@ -221,7 +221,7 @@ export const getProcessedFilesFromResponse = (files: FileResponse[]) => {
       id: fileItem.related_id,
       name: fileItem.filename,
       size: fileItem.size || 0,
-      type: fileItem.mime_type,
+      type: fileItem.mime_type || '',
       progress: 100,
       transferMethod: fileItem.transfer_method,
       supportFileType,

@@ -37,7 +37,7 @@ const FileItem = ({
   onReUpload,
   canPreview,
 }: FileItemProps) => {
-  const { id, name, type, progress, url, base64Url, isRemote } = file
+  const { id, name, type = '', progress, url, base64Url, isRemote } = file
   const [previewUrl, setPreviewUrl] = useState('')
   const ext = getFileExtension(name, type, isRemote)
   const uploadError = progress === -1
