@@ -89,12 +89,12 @@ DC="docker compose -p $PROJECT"
 # Actions (executed in order: build -> redeploy -> log)
 # ------------------------------------------------------------------------------
 
-# Build images (--progress=plain shows full build output)
+# Build images
 if $BUILD; then
     if $CLEAN; then
-        run $DC --progress=plain build --no-cache
+        run $DC build --no-cache
     else
-        run $DC --progress=plain build
+        run $DC build
     fi
 fi
 

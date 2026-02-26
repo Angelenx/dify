@@ -14,6 +14,7 @@ import {
 } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useReactFlow, useStoreApi } from 'reactflow'
+import ErrorBoundary from '@/app/components/base/error-boundary'
 import Tooltip from '@/app/components/base/tooltip'
 import { isConversationVar, isENV, isGlobalVar, isRagVariableVar, isSystemVar } from '@/app/components/workflow/nodes/_base/components/variable/utils'
 import VarFullPathPanel from '@/app/components/workflow/nodes/_base/components/variable/var-full-path-panel'
@@ -42,7 +43,77 @@ type WorkflowVariableBlockComponentProps = {
   }) => Type
 }
 
-const WorkflowVariableBlockComponent = ({
+/**
+ * Fallback when WorkflowVariableBlockComponent is rendered outside ReactFlowProvider
+ * (e.g. when pasting {{#nodeId.var#}} into Agent app editor). Renders the variable label
+ * without the "jump to node" functionality.
+ */
+const WorkflowVariableBlockComponentFallback = memo(({
+  nodeKey,
+  variables,
+  workflowNodesMap = {},
+  getVarType,
+  environmentVariables,
+  conversationVariables,
+  ragVariables,
+}: WorkflowVariableBlockComponentProps) => {
+  const { t } = useTranslation()
+  const [ref, isSelected] = useSelectOrDelete(nodeKey, DELETE_WORKFLOW_VARIABLE_BLOCK_COMMAND)
+  const variablesLength = variables.length
+  const isRagVar = isRagVariableVar(variables)
+  const isShowAPart = variablesLength > 2 && !isRagVar
+  const varName = (
+    () => {
+      const isSystem = isSystemVar(variables)
+      const varName = variables[variablesLength - 1]
+      return `${isSystem ? 'sys.' : ''}${varName}`
+    }
+  )()
+  const node = workflowNodesMap[variables[isRagVar ? 1 : 0]]
+  const isException = isExceptionVariable(varName, node?.type)
+  const variableValid = useMemo(() => {
+    let variableValid = true
+    const isEnv = isENV(variables)
+    const isChatVar = isConversationVar(variables)
+    const isGlobal = isGlobalVar(variables)
+    if (isGlobal)
+      return true
+
+    if (isEnv) {
+      if (environmentVariables)
+        variableValid = environmentVariables.some(v => v.variable === `${variables?.[0] ?? ''}.${variables?.[1] ?? ''}`)
+    }
+    else if (isChatVar) {
+      if (conversationVariables)
+        variableValid = conversationVariables.some(v => v.variable === `${variables?.[0] ?? ''}.${variables?.[1] ?? ''}`)
+    }
+    else if (isRagVar) {
+      if (ragVariables)
+        variableValid = ragVariables.some(v => v.variable === `${variables?.[0] ?? ''}.${variables?.[1] ?? ''}.${variables?.[2] ?? ''}`)
+    }
+    else {
+      variableValid = !!node
+    }
+    return variableValid
+  }, [variables, node, environmentVariables, conversationVariables, isRagVar, ragVariables])
+
+  return (
+    <VariableLabelInEditor
+      nodeType={node?.type}
+      nodeTitle={node?.title}
+      variables={variables}
+      onClick={() => {}}
+      isExceptionVariable={isException}
+      errorMsg={!variableValid ? t('errorMsg.invalidVariable', { ns: 'workflow' }) : undefined}
+      isSelected={isSelected}
+      ref={ref}
+      notShowFullPath={isShowAPart}
+    />
+  )
+})
+WorkflowVariableBlockComponentFallback.displayName = 'WorkflowVariableBlockComponentFallback'
+
+const WorkflowVariableBlockComponentInner = ({
   nodeKey,
   variables,
   workflowNodesMap = {},
@@ -176,5 +247,15 @@ const WorkflowVariableBlockComponent = ({
     </Tooltip>
   )
 }
+
+const WorkflowVariableBlockComponent = (props: WorkflowVariableBlockComponentProps) => (
+  <ErrorBoundary
+    fallback={(
+      <WorkflowVariableBlockComponentFallback {...props} />
+    )}
+  >
+    <WorkflowVariableBlockComponentInner {...props} />
+  </ErrorBoundary>
+)
 
 export default memo(WorkflowVariableBlockComponent)
