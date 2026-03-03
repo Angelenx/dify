@@ -1,11 +1,14 @@
 'use client'
-import { useClipboard } from 'foxact/use-clipboard'
-import { useCallback } from 'react'
+import {
+  useCallback,
+  useState,
+} from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Copy,
   CopyCheck,
 } from '@/app/components/base/icons/src/vender/line/files'
+import { writeTextToClipboard } from '@/utils/clipboard'
 import Tooltip from '../tooltip'
 
 type Props = {
@@ -16,11 +19,22 @@ const prefixEmbedded = 'overview.appInfo.embedded'
 
 const CopyIcon = ({ content }: Props) => {
   const { t } = useTranslation()
-  const { copied, copy, reset } = useClipboard()
+  const [copied, setCopied] = useState(false)
 
-  const handleCopy = useCallback(() => {
-    copy(content)
-  }, [copy, content])
+  const handleCopy = useCallback(async () => {
+    try {
+      await writeTextToClipboard(content)
+      setCopied(true)
+    }
+    catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('CopyIcon: failed to copy', err)
+    }
+  }, [content])
+
+  const handleMouseLeave = useCallback(() => {
+    setCopied(false)
+  }, [])
 
   return (
     <Tooltip
@@ -30,7 +44,7 @@ const CopyIcon = ({ content }: Props) => {
           : t(`${prefixEmbedded}.copy`, { ns: 'appOverview' })) || ''
       }
     >
-      <div onMouseLeave={reset}>
+      <div onMouseLeave={handleMouseLeave}>
         {!copied
           ? (
               <Copy className="mx-1 h-3.5 w-3.5 cursor-pointer text-text-tertiary" onClick={handleCopy} />

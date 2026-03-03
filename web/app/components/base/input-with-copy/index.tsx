@@ -1,10 +1,14 @@
 'use client'
 import type { InputProps } from '../input'
 import { RiClipboardFill, RiClipboardLine } from '@remixicon/react'
-import { useClipboard } from 'foxact/use-clipboard'
 import * as React from 'react'
+import {
+  useCallback,
+  useState,
+} from 'react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/utils/classnames'
+import { writeTextToClipboard } from '@/utils/clipboard'
 import ActionButton from '../action-button'
 import Tooltip from '../tooltip'
 
@@ -32,12 +36,23 @@ const InputWithCopy = React.forwardRef<HTMLInputElement, InputWithCopyProps>((
   const valueToString = typeof value === 'string' ? value : String(value || '')
   const finalCopyValue = copyValue || valueToString
 
-  const { copied, copy, reset } = useClipboard()
+  const [copied, setCopied] = useState(false)
 
-  const handleCopy = () => {
-    copy(finalCopyValue)
-    onCopy?.(finalCopyValue)
-  }
+  const handleCopy = useCallback(async () => {
+    try {
+      await writeTextToClipboard(finalCopyValue)
+      setCopied(true)
+      onCopy?.(finalCopyValue)
+    }
+    catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('InputWithCopy: failed to copy', err)
+    }
+  }, [finalCopyValue, onCopy])
+
+  const handleMouseLeave = useCallback(() => {
+    setCopied(false)
+  }, [])
 
   return (
     <div className={cn('relative w-full', wrapperClassName)}>
@@ -56,7 +71,7 @@ const InputWithCopy = React.forwardRef<HTMLInputElement, InputWithCopyProps>((
       {showCopyButton && (
         <div
           className="absolute right-2 top-1/2 -translate-y-1/2"
-          onMouseLeave={reset}
+          onMouseLeave={handleMouseLeave}
         >
           <Tooltip
             popupContent={

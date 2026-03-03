@@ -3,11 +3,14 @@ import {
   RiClipboardFill,
   RiClipboardLine,
 } from '@remixicon/react'
-import { useClipboard } from 'foxact/use-clipboard'
-import { useCallback } from 'react'
+import {
+  useCallback,
+  useState,
+} from 'react'
 import { useTranslation } from 'react-i18next'
 import ActionButton from '@/app/components/base/action-button'
 import Tooltip from '@/app/components/base/tooltip'
+import { writeTextToClipboard } from '@/utils/clipboard'
 import copyStyle from './style.module.css'
 
 type Props = {
@@ -19,11 +22,22 @@ const prefixEmbedded = 'overview.appInfo.embedded'
 
 const CopyFeedback = ({ content }: Props) => {
   const { t } = useTranslation()
-  const { copied, copy, reset } = useClipboard()
+  const [copied, setCopied] = useState(false)
 
-  const handleCopy = useCallback(() => {
-    copy(content)
-  }, [copy, content])
+  const handleCopy = useCallback(async () => {
+    try {
+      await writeTextToClipboard(content)
+      setCopied(true)
+    }
+    catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('CopyFeedback: failed to copy', err)
+    }
+  }, [content])
+
+  const handleMouseLeave = useCallback(() => {
+    setCopied(false)
+  }, [])
 
   return (
     <Tooltip
@@ -36,7 +50,7 @@ const CopyFeedback = ({ content }: Props) => {
       <ActionButton>
         <div
           onClick={handleCopy}
-          onMouseLeave={reset}
+          onMouseLeave={handleMouseLeave}
         >
           {copied && <RiClipboardFill className="h-4 w-4" />}
           {!copied && <RiClipboardLine className="h-4 w-4" />}
@@ -50,11 +64,22 @@ export default CopyFeedback
 
 export const CopyFeedbackNew = ({ content, className }: Pick<Props, 'className' | 'content'>) => {
   const { t } = useTranslation()
-  const { copied, copy, reset } = useClipboard()
+  const [copied, setCopied] = useState(false)
 
-  const handleCopy = useCallback(() => {
-    copy(content)
-  }, [copy, content])
+  const handleCopy = useCallback(async () => {
+    try {
+      await writeTextToClipboard(content)
+      setCopied(true)
+    }
+    catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('CopyFeedbackNew: failed to copy', err)
+    }
+  }, [content])
+
+  const handleMouseLeave = useCallback(() => {
+    setCopied(false)
+  }, [])
 
   return (
     <Tooltip
@@ -70,7 +95,7 @@ export const CopyFeedbackNew = ({ content, className }: Pick<Props, 'className' 
       >
         <div
           onClick={handleCopy}
-          onMouseLeave={reset}
+          onMouseLeave={handleMouseLeave}
           className={`h-full w-full ${copyStyle.copyIcon} ${copied ? copyStyle.copied : ''
           }`}
         >
