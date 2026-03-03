@@ -144,15 +144,16 @@ const List = () => {
       return
     }
 
-    if (anchorRef.current) {
+    const scrollRoot = containerRef.current
+    if (anchorRef.current && scrollRoot) {
       observer = new IntersectionObserver((entries) => {
         if (entries[0].isIntersecting && !isLoading && !error && hasMore)
           setSize((size: number) => size + 1)
-      }, { rootMargin: '100px' })
+      }, { root: scrollRoot, rootMargin: '100px' })
       observer.observe(anchorRef.current)
     }
     return () => observer?.disconnect()
-  }, [isLoading, setSize, anchorRef, mutate, data, error])
+  }, [isLoading, setSize, anchorRef, containerRef, mutate, data, error])
 
   const { run: handleSearch } = useDebounceFn(() => {
     setSearchKeywords(keywords)

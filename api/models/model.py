@@ -568,6 +568,7 @@ class InstalledApp(Base):
     is_pinned: Mapped[bool] = mapped_column(sa.Boolean, nullable=False, server_default=sa.text("false"))
     last_used_at = mapped_column(sa.DateTime, nullable=True)
     created_at = mapped_column(sa.DateTime, nullable=False, server_default=func.current_timestamp())
+    created_by = mapped_column(StringUUID, nullable=False) # add_angelen
 
     @property
     def app(self):

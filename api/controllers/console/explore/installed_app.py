@@ -30,7 +30,8 @@ class InstalledAppsListApi(Resource):
     def get(self):
         app_id = request.args.get("app_id", default=None, type=str)
         current_tenant_id = current_user.current_tenant_id
-
+        current_created_by = current_user.id # add_angelen
+        current_user.role = TenantService.get_user_role(current_user, current_user.current_tenant) # add_angelen
         if app_id:
             installed_apps = (
                 db.session.query(InstalledApp)
@@ -38,9 +39,14 @@ class InstalledAppsListApi(Resource):
                 .all()
             )
         else:
-            installed_apps = db.session.query(InstalledApp).where(InstalledApp.tenant_id == current_tenant_id).all()
-
-        current_user.role = TenantService.get_user_role(current_user, current_user.current_tenant)
+            # installed_apps = db.session.query(InstalledApp).where(InstalledApp.tenant_id == current_tenant_id).all()
+            # add_angelen
+            if current_user.role in {"owner", "admin"}:
+                installed_apps = db.session.query(InstalledApp).where(InstalledApp.tenant_id == current_tenant_id).all()
+            else:
+                installed_apps = db.session.query(InstalledApp).where(InstalledApp.created_by == current_created_by).filter(InstalledApp.tenant_id == current_tenant_id).all()
+        # current_user.role = TenantService.get_user_role(current_user, current_user.current_tenant)
+        # add_angelen
         installed_app_list: list[dict[str, Any]] = [
             {
                 "id": installed_app.id,
@@ -50,6 +56,7 @@ class InstalledAppsListApi(Resource):
                 "last_used_at": installed_app.last_used_at,
                 "editable": current_user.role in {"owner", "admin"},
                 "uninstallable": current_tenant_id == installed_app.app_owner_tenant_id,
+                "created_by": installed_app.created_by, # add_angelen
             }
             for installed_app in installed_apps
             if installed_app.app is not None

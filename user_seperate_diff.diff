@@ -1,0 +1,85 @@
+ api/controllers/console/explore/installed_app.py                   | 4 +++-
+ api/events/event_handlers/create_installed_app_when_app_created.py | 3 +++
+ api/migrations/versions/64b051264f32_init.py                       | 1 +
+ api/models/model.py                                                | 1 +
+ api/services/app_service.py                                        | 2 +-
+
+
+diff --git a/api/controllers/console/explore/installed_app.py b/api/controllers/console/explore/installed_app.py
+index d72715a..14e15cc 100644
+--- a/api/controllers/console/explore/installed_app.py
++++ b/api/controllers/console/explore/installed_app.py
+@@ -21,7 +21,8 @@ class InstalledAppsListApi(Resource):
+     @marshal_with(installed_app_list_fields)
+     def get(self):
+         current_tenant_id = current_user.current_tenant_id
+-        installed_apps = db.session.query(InstalledApp).filter(InstalledApp.tenant_id == current_tenant_id).all()
++        current_created_by = current_user.id
++        installed_apps = db.session.query(InstalledApp).filter(InstalledApp.created_by == current_created_by).filter(InstalledApp.tenant_id == current_tenant_id).all()
+ 
+         current_user.role = TenantService.get_user_role(current_user, current_user.current_tenant)
+         installed_apps = [
+@@ -33,6 +34,7 @@ class InstalledAppsListApi(Resource):
+                 "last_used_at": installed_app.last_used_at,
+                 "editable": current_user.role in {"owner", "admin"},
+                 "uninstallable": current_tenant_id == installed_app.app_owner_tenant_id,
++                "created_by": current_user.id == installed_app.created_by,
+             }
+             for installed_app in installed_apps
+             if installed_app.app is not None
+diff --git a/api/events/event_handlers/create_installed_app_when_app_created.py b/api/events/event_handlers/create_installed_app_when_app_created.py
+index 57412cc..dba3adf 100644
+--- a/api/events/event_handlers/create_installed_app_when_app_created.py
++++ b/api/events/event_handlers/create_installed_app_when_app_created.py
+@@ -7,10 +7,13 @@ from models.model import InstalledApp
+ def handle(sender, **kwargs):
+     """Create an installed app when an app is created."""
+     app = sender
++    account = kwargs.get('account')
+     installed_app = InstalledApp(
+         tenant_id=app.tenant_id,
+         app_id=app.id,
+         app_owner_tenant_id=app.tenant_id,
++        #here installed app's creator should be changed to current user
++        created_by = account.id,
+     )
+     db.session.add(installed_app)
+     db.session.commit()
+diff --git a/api/migrations/versions/64b051264f32_init.py b/api/migrations/versions/64b051264f32_init.py
+index 8c45ae8..1d5e0dc 100644
+--- a/api/migrations/versions/64b051264f32_init.py
++++ b/api/migrations/versions/64b051264f32_init.py
+@@ -361,6 +361,7 @@ def upgrade():
+     sa.Column('is_pinned', sa.Boolean(), server_default=sa.text('false'), nullable=False),
+     sa.Column('last_used_at', sa.DateTime(), nullable=True),
+     sa.Column('created_at', sa.DateTime(), server_default=sa.text('CURRENT_TIMESTAMP(0)'), nullable=False),
++    sa.Column('created_by', postgresql.UUID(), nullable=False),
+     sa.PrimaryKeyConstraint('id', name='installed_app_pkey'),
+     sa.UniqueConstraint('tenant_id', 'app_id', name='unique_tenant_app')
+     )
+diff --git a/api/models/model.py b/api/models/model.py
+index e909d53..3e68a81 100644
+--- a/api/models/model.py
++++ b/api/models/model.py
+@@ -507,6 +507,7 @@ class InstalledApp(db.Model):
+     is_pinned = db.Column(db.Boolean, nullable=False, server_default=db.text("false"))
+     last_used_at = db.Column(db.DateTime, nullable=True)
+     created_at = db.Column(db.DateTime, nullable=False, server_default=db.text("CURRENT_TIMESTAMP(0)"))
++    created_by = db.Column(StringUUID, nullable=False)
+ 
+     @property
+     def app(self):
+diff --git a/api/services/app_service.py b/api/services/app_service.py
+index ac45d62..5b08dbf 100644
+--- a/api/services/app_service.py
++++ b/api/services/app_service.py
+@@ -53,7 +53,7 @@ class AppService:
+                 filters.append(App.id.in_(target_ids))
+             else:
+                 return None
+-
++        filters.append(App.created_by == current_user.id)
+         app_models = db.paginate(
+             db.select(App).where(*filters).order_by(App.created_at.desc()),
+             page=args["page"],
+

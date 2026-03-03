@@ -20,6 +20,7 @@ from libs.datetime_utils import naive_utc_now
 from models.account import Account
 from models.model import App, AppMode, AppModelConfig, Site
 from models.tools import ApiToolProvider
+from services.account_service import TenantService # add_angelen
 from services.enterprise.enterprise_service import EnterpriseService
 from services.feature_service import FeatureService
 from services.tag_service import TagService
@@ -62,7 +63,9 @@ class AppService:
                 filters.append(App.id.in_(target_ids))
             else:
                 return None
-
+        
+        if TenantService.get_user_role(current_user, current_user.current_tenant) not in {"owner", "admin"}: # add_angelen
+            filters.append(App.created_by == current_user.id) # add_angelen
         app_models = db.paginate(
             db.select(App).where(*filters).order_by(App.created_at.desc()),
             page=args["page"],
