@@ -130,11 +130,10 @@ def edit_app_permission_required(f: Callable[P, R]):
         if not current_user.has_edit_permission:
             raise Forbidden()
 
-        app_model = kwargs.get("app_model", None)
+        app_model = kwargs.get("app_model")
         if app_model is None:
             # no app provided, deny
-            # raise Forbidden()
-            return f(*args, **kwargs)
+            raise Forbidden()
 
         # allow if admin/owner
         if getattr(user, "is_admin_or_owner", False):
