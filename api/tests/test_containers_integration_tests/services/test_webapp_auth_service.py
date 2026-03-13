@@ -4,7 +4,6 @@ from unittest.mock import patch
 
 import pytest
 from faker import Faker
-from sqlalchemy.orm import Session
 from werkzeug.exceptions import NotFound, Unauthorized
 
 from libs.password import hash_password
@@ -46,7 +45,7 @@ class TestWebAppAuthService:
                 "enterprise_service": mock_enterprise_service,
             }
 
-    def _create_test_account_and_tenant(self, db_session_with_containers: Session, mock_external_service_dependencies):
+    def _create_test_account_and_tenant(self, db_session_with_containers, mock_external_service_dependencies):
         """
         Helper method to create a test account and tenant for testing.
 
@@ -69,16 +68,18 @@ class TestWebAppAuthService:
             status="active",
         )
 
-        db_session_with_containers.add(account)
-        db_session_with_containers.commit()
+        from extensions.ext_database import db
+
+        db.session.add(account)
+        db.session.commit()
 
         # Create tenant for the account
         tenant = Tenant(
             name=fake.company(),
             status="normal",
         )
-        db_session_with_containers.add(tenant)
-        db_session_with_containers.commit()
+        db.session.add(tenant)
+        db.session.commit()
 
         # Create tenant-account join
         join = TenantAccountJoin(
@@ -87,17 +88,15 @@ class TestWebAppAuthService:
             role=TenantAccountRole.OWNER,
             current=True,
         )
-        db_session_with_containers.add(join)
-        db_session_with_containers.commit()
+        db.session.add(join)
+        db.session.commit()
 
         # Set current tenant for account
         account.current_tenant = tenant
 
         return account, tenant
 
-    def _create_test_account_with_password(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
-    ):
+    def _create_test_account_with_password(self, db_session_with_containers, mock_external_service_dependencies):
         """
         Helper method to create a test account with password for testing.
 
@@ -132,16 +131,18 @@ class TestWebAppAuthService:
         account.password = base64.b64encode(password_hash).decode()
         account.password_salt = base64.b64encode(salt).decode()
 
-        db_session_with_containers.add(account)
-        db_session_with_containers.commit()
+        from extensions.ext_database import db
+
+        db.session.add(account)
+        db.session.commit()
 
         # Create tenant for the account
         tenant = Tenant(
             name=fake.company(),
             status="normal",
         )
-        db_session_with_containers.add(tenant)
-        db_session_with_containers.commit()
+        db.session.add(tenant)
+        db.session.commit()
 
         # Create tenant-account join
         join = TenantAccountJoin(
@@ -150,17 +151,15 @@ class TestWebAppAuthService:
             role=TenantAccountRole.OWNER,
             current=True,
         )
-        db_session_with_containers.add(join)
-        db_session_with_containers.commit()
+        db.session.add(join)
+        db.session.commit()
 
         # Set current tenant for account
         account.current_tenant = tenant
 
         return account, tenant, password
 
-    def _create_test_app_and_site(
-        self, db_session_with_containers: Session, mock_external_service_dependencies, tenant
-    ):
+    def _create_test_app_and_site(self, db_session_with_containers, mock_external_service_dependencies, tenant):
         """
         Helper method to create a test app and site for testing.
 
@@ -189,8 +188,10 @@ class TestWebAppAuthService:
             enable_api=True,
         )
 
-        db_session_with_containers.add(app)
-        db_session_with_containers.commit()
+        from extensions.ext_database import db
+
+        db.session.add(app)
+        db.session.commit()
 
         # Create site
         site = Site(
@@ -202,12 +203,12 @@ class TestWebAppAuthService:
             status="normal",
             customize_token_strategy="not_allow",
         )
-        db_session_with_containers.add(site)
-        db_session_with_containers.commit()
+        db.session.add(site)
+        db.session.commit()
 
         return app, site
 
-    def test_authenticate_success(self, db_session_with_containers: Session, mock_external_service_dependencies):
+    def test_authenticate_success(self, db_session_with_containers, mock_external_service_dependencies):
         """
         Test successful authentication with valid email and password.
 
@@ -232,15 +233,14 @@ class TestWebAppAuthService:
         assert result.status == AccountStatus.ACTIVE
 
         # Verify database state
+        from extensions.ext_database import db
 
-        db_session_with_containers.refresh(result)
+        db.session.refresh(result)
         assert result.id is not None
         assert result.password is not None
         assert result.password_salt is not None
 
-    def test_authenticate_account_not_found(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
-    ):
+    def test_authenticate_account_not_found(self, db_session_with_containers, mock_external_service_dependencies):
         """
         Test authentication with non-existent email.
 
@@ -262,7 +262,7 @@ class TestWebAppAuthService:
         with pytest.raises(AccountNotFoundError):
             WebAppAuthService.authenticate(non_existent_email, "any_password")
 
-    def test_authenticate_account_banned(self, db_session_with_containers: Session, mock_external_service_dependencies):
+    def test_authenticate_account_banned(self, db_session_with_containers, mock_external_service_dependencies):
         """
         Test authentication with banned account.
 
@@ -292,8 +292,10 @@ class TestWebAppAuthService:
         account.password = base64.b64encode(password_hash).decode()
         account.password_salt = base64.b64encode(salt).decode()
 
-        db_session_with_containers.add(account)
-        db_session_with_containers.commit()
+        from extensions.ext_database import db
+
+        db.session.add(account)
+        db.session.commit()
 
         # Act & Assert: Verify proper error handling
         with pytest.raises(AccountLoginError) as exc_info:
@@ -301,9 +303,7 @@ class TestWebAppAuthService:
 
         assert "Account is banned." in str(exc_info.value)
 
-    def test_authenticate_invalid_password(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
-    ):
+    def test_authenticate_invalid_password(self, db_session_with_containers, mock_external_service_dependencies):
         """
         Test authentication with invalid password.
 
@@ -323,7 +323,7 @@ class TestWebAppAuthService:
         assert "Invalid email or password." in str(exc_info.value)
 
     def test_authenticate_account_without_password(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
+        self, db_session_with_containers, mock_external_service_dependencies
     ):
         """
         Test authentication for account without password.
@@ -345,8 +345,10 @@ class TestWebAppAuthService:
             status="active",
         )
 
-        db_session_with_containers.add(account)
-        db_session_with_containers.commit()
+        from extensions.ext_database import db
+
+        db.session.add(account)
+        db.session.commit()
 
         # Act & Assert: Verify proper error handling
         with pytest.raises(AccountPasswordError) as exc_info:
@@ -354,7 +356,7 @@ class TestWebAppAuthService:
 
         assert "Invalid email or password." in str(exc_info.value)
 
-    def test_login_success(self, db_session_with_containers: Session, mock_external_service_dependencies):
+    def test_login_success(self, db_session_with_containers, mock_external_service_dependencies):
         """
         Test successful login and JWT token generation.
 
@@ -386,9 +388,7 @@ class TestWebAppAuthService:
         assert call_args["auth_type"] == "internal"
         assert "exp" in call_args
 
-    def test_get_user_through_email_success(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
-    ):
+    def test_get_user_through_email_success(self, db_session_with_containers, mock_external_service_dependencies):
         """
         Test successful user retrieval through email.
 
@@ -413,13 +413,12 @@ class TestWebAppAuthService:
         assert result.status == AccountStatus.ACTIVE
 
         # Verify database state
+        from extensions.ext_database import db
 
-        db_session_with_containers.refresh(result)
+        db.session.refresh(result)
         assert result.id is not None
 
-    def test_get_user_through_email_not_found(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
-    ):
+    def test_get_user_through_email_not_found(self, db_session_with_containers, mock_external_service_dependencies):
         """
         Test user retrieval with non-existent email.
 
@@ -436,9 +435,7 @@ class TestWebAppAuthService:
         # Assert: Verify proper handling
         assert result is None
 
-    def test_get_user_through_email_banned(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
-    ):
+    def test_get_user_through_email_banned(self, db_session_with_containers, mock_external_service_dependencies):
         """
         Test user retrieval with banned account.
 
@@ -459,8 +456,10 @@ class TestWebAppAuthService:
             status=AccountStatus.BANNED,
         )
 
-        db_session_with_containers.add(account)
-        db_session_with_containers.commit()
+        from extensions.ext_database import db
+
+        db.session.add(account)
+        db.session.commit()
 
         # Act & Assert: Verify proper error handling
         with pytest.raises(Unauthorized) as exc_info:
@@ -469,7 +468,7 @@ class TestWebAppAuthService:
         assert "Account is banned." in str(exc_info.value)
 
     def test_send_email_code_login_email_with_account(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
+        self, db_session_with_containers, mock_external_service_dependencies
     ):
         """
         Test sending email code login email with account.
@@ -510,7 +509,7 @@ class TestWebAppAuthService:
         assert "code" in mail_call_args[1]
 
     def test_send_email_code_login_email_with_email_only(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
+        self, db_session_with_containers, mock_external_service_dependencies
     ):
         """
         Test sending email code login email with email only.
@@ -550,7 +549,7 @@ class TestWebAppAuthService:
         assert "code" in mail_call_args[1]
 
     def test_send_email_code_login_email_no_email_provided(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
+        self, db_session_with_containers, mock_external_service_dependencies
     ):
         """
         Test sending email code login email without providing email.
@@ -567,9 +566,7 @@ class TestWebAppAuthService:
 
         assert "Email must be provided." in str(exc_info.value)
 
-    def test_get_email_code_login_data_success(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
-    ):
+    def test_get_email_code_login_data_success(self, db_session_with_containers, mock_external_service_dependencies):
         """
         Test successful retrieval of email code login data.
 
@@ -596,9 +593,7 @@ class TestWebAppAuthService:
             "mock_token", "email_code_login"
         )
 
-    def test_get_email_code_login_data_no_data(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
-    ):
+    def test_get_email_code_login_data_no_data(self, db_session_with_containers, mock_external_service_dependencies):
         """
         Test email code login data retrieval when no data exists.
 
@@ -622,7 +617,7 @@ class TestWebAppAuthService:
         )
 
     def test_revoke_email_code_login_token_success(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
+        self, db_session_with_containers, mock_external_service_dependencies
     ):
         """
         Test successful revocation of email code login token.
@@ -641,7 +636,7 @@ class TestWebAppAuthService:
             "mock_token", "email_code_login"
         )
 
-    def test_create_end_user_success(self, db_session_with_containers: Session, mock_external_service_dependencies):
+    def test_create_end_user_success(self, db_session_with_containers, mock_external_service_dependencies):
         """
         Test successful end user creation.
 
@@ -673,15 +668,14 @@ class TestWebAppAuthService:
         assert result.external_user_id == "enterpriseuser"
 
         # Verify database state
+        from extensions.ext_database import db
 
-        db_session_with_containers.refresh(result)
+        db.session.refresh(result)
         assert result.id is not None
         assert result.created_at is not None
         assert result.updated_at is not None
 
-    def test_create_end_user_site_not_found(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
-    ):
+    def test_create_end_user_site_not_found(self, db_session_with_containers, mock_external_service_dependencies):
         """
         Test end user creation with non-existent site code.
 
@@ -699,9 +693,7 @@ class TestWebAppAuthService:
 
         assert "Site not found." in str(exc_info.value)
 
-    def test_create_end_user_app_not_found(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
-    ):
+    def test_create_end_user_app_not_found(self, db_session_with_containers, mock_external_service_dependencies):
         """
         Test end user creation when app is not found.
 
@@ -716,8 +708,10 @@ class TestWebAppAuthService:
             status="normal",
         )
 
-        db_session_with_containers.add(tenant)
-        db_session_with_containers.commit()
+        from extensions.ext_database import db
+
+        db.session.add(tenant)
+        db.session.commit()
 
         site = Site(
             app_id="00000000-0000-0000-0000-000000000000",
@@ -728,8 +722,8 @@ class TestWebAppAuthService:
             status="normal",
             customize_token_strategy="not_allow",
         )
-        db_session_with_containers.add(site)
-        db_session_with_containers.commit()
+        db.session.add(site)
+        db.session.commit()
 
         # Act & Assert: Verify proper error handling
         with pytest.raises(NotFound) as exc_info:
@@ -738,7 +732,7 @@ class TestWebAppAuthService:
         assert "App not found." in str(exc_info.value)
 
     def test_is_app_require_permission_check_with_access_mode_private(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
+        self, db_session_with_containers, mock_external_service_dependencies
     ):
         """
         Test permission check requirement for private access mode.
@@ -757,7 +751,7 @@ class TestWebAppAuthService:
         assert result is True
 
     def test_is_app_require_permission_check_with_access_mode_public(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
+        self, db_session_with_containers, mock_external_service_dependencies
     ):
         """
         Test permission check requirement for public access mode.
@@ -776,7 +770,7 @@ class TestWebAppAuthService:
         assert result is False
 
     def test_is_app_require_permission_check_with_app_code(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
+        self, db_session_with_containers, mock_external_service_dependencies
     ):
         """
         Test permission check requirement using app code.
@@ -802,7 +796,7 @@ class TestWebAppAuthService:
         ].WebAppAuth.get_app_access_mode_by_id.assert_called_once_with("mock_app_id")
 
     def test_is_app_require_permission_check_no_parameters(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
+        self, db_session_with_containers, mock_external_service_dependencies
     ):
         """
         Test permission check requirement with no parameters.
@@ -820,7 +814,7 @@ class TestWebAppAuthService:
         assert "Either app_code or app_id must be provided." in str(exc_info.value)
 
     def test_get_app_auth_type_with_access_mode_public(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
+        self, db_session_with_containers, mock_external_service_dependencies
     ):
         """
         Test app authentication type for public access mode.
@@ -839,7 +833,7 @@ class TestWebAppAuthService:
         assert result == WebAppAuthType.PUBLIC
 
     def test_get_app_auth_type_with_access_mode_private(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
+        self, db_session_with_containers, mock_external_service_dependencies
     ):
         """
         Test app authentication type for private access mode.
@@ -857,9 +851,7 @@ class TestWebAppAuthService:
         # Assert: Verify correct result
         assert result == WebAppAuthType.INTERNAL
 
-    def test_get_app_auth_type_with_app_code(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
-    ):
+    def test_get_app_auth_type_with_app_code(self, db_session_with_containers, mock_external_service_dependencies):
         """
         Test app authentication type using app code.
 
@@ -886,9 +878,7 @@ class TestWebAppAuthService:
             "enterprise_service"
         ].WebAppAuth.get_app_access_mode_by_id.assert_called_once_with(app_id="mock_app_id")
 
-    def test_get_app_auth_type_no_parameters(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
-    ):
+    def test_get_app_auth_type_no_parameters(self, db_session_with_containers, mock_external_service_dependencies):
         """
         Test app authentication type with no parameters.
 

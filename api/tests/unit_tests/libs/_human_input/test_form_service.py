@@ -6,11 +6,11 @@ from datetime import datetime, timedelta
 
 import pytest
 
-from dify_graph.nodes.human_input.entities import (
+from core.workflow.nodes.human_input.entities import (
     FormInput,
     UserAction,
 )
-from dify_graph.nodes.human_input.enums import (
+from core.workflow.nodes.human_input.enums import (
     FormInputType,
     TimeoutUnit,
 )

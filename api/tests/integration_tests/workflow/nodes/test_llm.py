@@ -4,17 +4,18 @@ import uuid
 from collections.abc import Generator
 from unittest.mock import MagicMock, patch
 
-from core.app.entities.app_invoke_entities import InvokeFrom, UserFrom
+from core.app.entities.app_invoke_entities import InvokeFrom
 from core.llm_generator.output_parser.structured_output import _parse_structured_output
 from core.model_manager import ModelInstance
-from dify_graph.enums import WorkflowNodeExecutionStatus
-from dify_graph.node_events import StreamCompletedEvent
-from dify_graph.nodes.llm.node import LLMNode
-from dify_graph.nodes.llm.protocols import CredentialsProvider, ModelFactory
-from dify_graph.runtime import GraphRuntimeState, VariablePool
-from dify_graph.system_variable import SystemVariable
+from core.workflow.entities import GraphInitParams
+from core.workflow.enums import WorkflowNodeExecutionStatus
+from core.workflow.node_events import StreamCompletedEvent
+from core.workflow.nodes.llm.node import LLMNode
+from core.workflow.nodes.llm.protocols import CredentialsProvider, ModelFactory
+from core.workflow.runtime import GraphRuntimeState, VariablePool
+from core.workflow.system_variable import SystemVariable
 from extensions.ext_database import db
-from tests.workflow_test_utils import build_test_graph_init_params
+from models.enums import UserFrom
 
 """FOR MOCK FIXTURES, DO NOT REMOVE"""
 
@@ -37,11 +38,11 @@ def init_llm_node(config: dict) -> LLMNode:
     workflow_id = "9d2074fc-6f86-45a9-b09d-6ecc63b9056d"
     user_id = "9d2074fc-6f86-45a9-b09d-6ecc63b9056e"
 
-    init_params = build_test_graph_init_params(
-        workflow_id=workflow_id,
-        graph_config=graph_config,
+    init_params = GraphInitParams(
         tenant_id=tenant_id,
         app_id=app_id,
+        workflow_id=workflow_id,
+        graph_config=graph_config,
         user_id=user_id,
         user_from=UserFrom.ACCOUNT,
         invoke_from=InvokeFrom.DEBUGGER,
@@ -112,8 +113,8 @@ def test_execute_llm():
         from decimal import Decimal
         from unittest.mock import MagicMock
 
-        from dify_graph.model_runtime.entities.llm_entities import LLMResult, LLMUsage
-        from dify_graph.model_runtime.entities.message_entities import AssistantPromptMessage
+        from core.model_runtime.entities.llm_entities import LLMResult, LLMUsage
+        from core.model_runtime.entities.message_entities import AssistantPromptMessage
 
         # Create mock model instance
         mock_model_instance = MagicMock(spec=ModelInstance)
@@ -157,7 +158,7 @@ def test_execute_llm():
 
     # Mock fetch_prompt_messages to avoid database calls
     def mock_fetch_prompt_messages_1(**_kwargs):
-        from dify_graph.model_runtime.entities.message_entities import SystemPromptMessage, UserPromptMessage
+        from core.model_runtime.entities.message_entities import SystemPromptMessage, UserPromptMessage
 
         return [
             SystemPromptMessage(content="you are a helpful assistant. today's weather is sunny."),
@@ -228,8 +229,8 @@ def test_execute_llm_with_jinja2():
         from decimal import Decimal
         from unittest.mock import MagicMock
 
-        from dify_graph.model_runtime.entities.llm_entities import LLMResult, LLMUsage
-        from dify_graph.model_runtime.entities.message_entities import AssistantPromptMessage
+        from core.model_runtime.entities.llm_entities import LLMResult, LLMUsage
+        from core.model_runtime.entities.message_entities import AssistantPromptMessage
 
         # Create mock model instance
         mock_model_instance = MagicMock(spec=ModelInstance)
@@ -273,7 +274,7 @@ def test_execute_llm_with_jinja2():
 
     # Mock fetch_prompt_messages to avoid database calls
     def mock_fetch_prompt_messages_2(**_kwargs):
-        from dify_graph.model_runtime.entities.message_entities import SystemPromptMessage, UserPromptMessage
+        from core.model_runtime.entities.message_entities import SystemPromptMessage, UserPromptMessage
 
         return [
             SystemPromptMessage(content="you are a helpful assistant. today's weather is sunny."),

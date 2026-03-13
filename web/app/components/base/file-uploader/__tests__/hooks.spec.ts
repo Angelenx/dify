@@ -11,7 +11,7 @@ vi.mock('next/navigation', () => ({
 }))
 
 // Exception: hook requires toast context that isn't available without a provider wrapper
-vi.mock('@/app/components/base/toast/context', () => ({
+vi.mock('@/app/components/base/toast', () => ({
   useToastContext: () => ({
     notify: mockNotify,
   }),

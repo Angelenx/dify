@@ -4,7 +4,6 @@ from unittest.mock import patch
 import pytest
 from faker import Faker
 from pydantic import ValidationError
-from sqlalchemy.orm import Session
 
 from core.tools.entities.tool_entities import WorkflowToolParameterConfiguration
 from core.tools.errors import WorkflowToolHumanInputNotSupportedError
@@ -64,7 +63,7 @@ class TestWorkflowToolManageService:
                 "tool_transform_service": mock_tool_transform_service,
             }
 
-    def _create_test_app_and_account(self, db_session_with_containers: Session, mock_external_service_dependencies):
+    def _create_test_app_and_account(self, db_session_with_containers, mock_external_service_dependencies):
         """
         Helper method to create a test app and account for testing.
 
@@ -120,12 +119,14 @@ class TestWorkflowToolManageService:
             conversation_variables=[],
         )
 
-        db_session_with_containers.add(workflow)
-        db_session_with_containers.commit()
+        from extensions.ext_database import db
+
+        db.session.add(workflow)
+        db.session.commit()
 
         # Update app to reference the workflow
         app.workflow_id = workflow.id
-        db_session_with_containers.commit()
+        db.session.commit()
 
         return app, account, workflow
 
@@ -152,9 +153,7 @@ class TestWorkflowToolManageService:
             ),
         ]
 
-    def test_create_workflow_tool_success(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
-    ):
+    def test_create_workflow_tool_success(self, db_session_with_containers, mock_external_service_dependencies):
         """
         Test successful workflow tool creation with valid parameters.
 
@@ -199,10 +198,11 @@ class TestWorkflowToolManageService:
         assert result == {"result": "success"}
 
         # Verify database state
+        from extensions.ext_database import db
 
         # Check if workflow tool provider was created
         created_tool_provider = (
-            db_session_with_containers.query(WorkflowToolProvider)
+            db.session.query(WorkflowToolProvider)
             .where(
                 WorkflowToolProvider.tenant_id == account.current_tenant.id,
                 WorkflowToolProvider.app_id == app.id,
@@ -230,7 +230,7 @@ class TestWorkflowToolManageService:
         ].workflow_provider_to_controller.assert_called_once()
 
     def test_create_workflow_tool_duplicate_name_error(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
+        self, db_session_with_containers, mock_external_service_dependencies
     ):
         """
         Test workflow tool creation fails when name already exists.
@@ -280,9 +280,10 @@ class TestWorkflowToolManageService:
         assert f"Tool with name {first_tool_name} or app_id {app.id} already exists" in str(exc_info.value)
 
         # Verify only one tool was created
+        from extensions.ext_database import db
 
         tool_count = (
-            db_session_with_containers.query(WorkflowToolProvider)
+            db.session.query(WorkflowToolProvider)
             .where(
                 WorkflowToolProvider.tenant_id == account.current_tenant.id,
             )
@@ -292,7 +293,7 @@ class TestWorkflowToolManageService:
         assert tool_count == 1
 
     def test_create_workflow_tool_invalid_app_error(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
+        self, db_session_with_containers, mock_external_service_dependencies
     ):
         """
         Test workflow tool creation fails when app does not exist.
@@ -330,9 +331,10 @@ class TestWorkflowToolManageService:
         assert f"App {non_existent_app_id} not found" in str(exc_info.value)
 
         # Verify no workflow tool was created
+        from extensions.ext_database import db
 
         tool_count = (
-            db_session_with_containers.query(WorkflowToolProvider)
+            db.session.query(WorkflowToolProvider)
             .where(
                 WorkflowToolProvider.tenant_id == account.current_tenant.id,
             )
@@ -342,7 +344,7 @@ class TestWorkflowToolManageService:
         assert tool_count == 0
 
     def test_create_workflow_tool_invalid_parameters_error(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
+        self, db_session_with_containers, mock_external_service_dependencies
     ):
         """
         Test workflow tool creation fails when parameters are invalid.
@@ -385,9 +387,10 @@ class TestWorkflowToolManageService:
         assert "validation error" in str(exc_info.value).lower()
 
         # Verify no workflow tool was created
+        from extensions.ext_database import db
 
         tool_count = (
-            db_session_with_containers.query(WorkflowToolProvider)
+            db.session.query(WorkflowToolProvider)
             .where(
                 WorkflowToolProvider.tenant_id == account.current_tenant.id,
             )
@@ -397,7 +400,7 @@ class TestWorkflowToolManageService:
         assert tool_count == 0
 
     def test_create_workflow_tool_duplicate_app_id_error(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
+        self, db_session_with_containers, mock_external_service_dependencies
     ):
         """
         Test workflow tool creation fails when app_id already exists.
@@ -447,9 +450,10 @@ class TestWorkflowToolManageService:
         assert f"Tool with name {second_tool_name} or app_id {app.id} already exists" in str(exc_info.value)
 
         # Verify only one tool was created
+        from extensions.ext_database import db
 
         tool_count = (
-            db_session_with_containers.query(WorkflowToolProvider)
+            db.session.query(WorkflowToolProvider)
             .where(
                 WorkflowToolProvider.tenant_id == account.current_tenant.id,
             )
@@ -459,7 +463,7 @@ class TestWorkflowToolManageService:
         assert tool_count == 1
 
     def test_create_workflow_tool_workflow_not_found_error(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
+        self, db_session_with_containers, mock_external_service_dependencies
     ):
         """
         Test workflow tool creation fails when app has no workflow.
@@ -477,9 +481,10 @@ class TestWorkflowToolManageService:
         )
 
         # Remove workflow reference from app
+        from extensions.ext_database import db
 
         app.workflow_id = None
-        db_session_with_containers.commit()
+        db.session.commit()
 
         # Attempt to create workflow tool for app without workflow
         tool_parameters = self._create_test_workflow_tool_parameters()
@@ -500,7 +505,7 @@ class TestWorkflowToolManageService:
 
         # Verify no workflow tool was created
         tool_count = (
-            db_session_with_containers.query(WorkflowToolProvider)
+            db.session.query(WorkflowToolProvider)
             .where(
                 WorkflowToolProvider.tenant_id == account.current_tenant.id,
             )
@@ -510,7 +515,7 @@ class TestWorkflowToolManageService:
         assert tool_count == 0
 
     def test_create_workflow_tool_human_input_node_error(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
+        self, db_session_with_containers, mock_external_service_dependencies
     ):
         """
         Test workflow tool creation fails when workflow contains human input nodes.
@@ -553,8 +558,10 @@ class TestWorkflowToolManageService:
 
         assert exc_info.value.error_code == "workflow_tool_human_input_not_supported"
 
+        from extensions.ext_database import db
+
         tool_count = (
-            db_session_with_containers.query(WorkflowToolProvider)
+            db.session.query(WorkflowToolProvider)
             .where(
                 WorkflowToolProvider.tenant_id == account.current_tenant.id,
             )
@@ -563,9 +570,7 @@ class TestWorkflowToolManageService:
 
         assert tool_count == 0
 
-    def test_update_workflow_tool_success(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
-    ):
+    def test_update_workflow_tool_success(self, db_session_with_containers, mock_external_service_dependencies):
         """
         Test successful workflow tool update with valid parameters.
 
@@ -598,9 +603,10 @@ class TestWorkflowToolManageService:
         )
 
         # Get the created tool
+        from extensions.ext_database import db
 
         created_tool = (
-            db_session_with_containers.query(WorkflowToolProvider)
+            db.session.query(WorkflowToolProvider)
             .where(
                 WorkflowToolProvider.tenant_id == account.current_tenant.id,
                 WorkflowToolProvider.app_id == app.id,
@@ -635,7 +641,7 @@ class TestWorkflowToolManageService:
         assert result == {"result": "success"}
 
         # Verify database state was updated
-        db_session_with_containers.refresh(created_tool)
+        db.session.refresh(created_tool)
         assert created_tool is not None
         assert created_tool.name == updated_tool_name
         assert created_tool.label == updated_tool_label
@@ -652,7 +658,7 @@ class TestWorkflowToolManageService:
         mock_external_service_dependencies["tool_transform_service"].workflow_provider_to_controller.assert_called()
 
     def test_update_workflow_tool_human_input_node_error(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
+        self, db_session_with_containers, mock_external_service_dependencies
     ):
         """
         Test workflow tool update fails when workflow contains human input nodes.
@@ -683,8 +689,10 @@ class TestWorkflowToolManageService:
             parameters=initial_tool_parameters,
         )
 
+        from extensions.ext_database import db
+
         created_tool = (
-            db_session_with_containers.query(WorkflowToolProvider)
+            db.session.query(WorkflowToolProvider)
             .where(
                 WorkflowToolProvider.tenant_id == account.current_tenant.id,
                 WorkflowToolProvider.app_id == app.id,
@@ -704,7 +712,7 @@ class TestWorkflowToolManageService:
                 ]
             }
         )
-        db_session_with_containers.commit()
+        db.session.commit()
 
         with pytest.raises(WorkflowToolHumanInputNotSupportedError) as exc_info:
             WorkflowToolManageService.update_workflow_tool(
@@ -720,12 +728,10 @@ class TestWorkflowToolManageService:
 
         assert exc_info.value.error_code == "workflow_tool_human_input_not_supported"
 
-        db_session_with_containers.refresh(created_tool)
+        db.session.refresh(created_tool)
         assert created_tool.name == original_name
 
-    def test_update_workflow_tool_not_found_error(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
-    ):
+    def test_update_workflow_tool_not_found_error(self, db_session_with_containers, mock_external_service_dependencies):
         """
         Test workflow tool update fails when tool does not exist.
 
@@ -762,9 +768,10 @@ class TestWorkflowToolManageService:
         assert f"Tool {non_existent_tool_id} not found" in str(exc_info.value)
 
         # Verify no workflow tool was created
+        from extensions.ext_database import db
 
         tool_count = (
-            db_session_with_containers.query(WorkflowToolProvider)
+            db.session.query(WorkflowToolProvider)
             .where(
                 WorkflowToolProvider.tenant_id == account.current_tenant.id,
             )
@@ -774,7 +781,7 @@ class TestWorkflowToolManageService:
         assert tool_count == 0
 
     def test_update_workflow_tool_same_name_success(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
+        self, db_session_with_containers, mock_external_service_dependencies
     ):
         """
         Test workflow tool update succeeds when keeping the same name.
@@ -806,9 +813,10 @@ class TestWorkflowToolManageService:
         )
 
         # Get the created tool
+        from extensions.ext_database import db
 
         created_tool = (
-            db_session_with_containers.query(WorkflowToolProvider)
+            db.session.query(WorkflowToolProvider)
             .where(
                 WorkflowToolProvider.tenant_id == account.current_tenant.id,
                 WorkflowToolProvider.app_id == app.id,
@@ -832,12 +840,12 @@ class TestWorkflowToolManageService:
         assert result == {"result": "success"}
 
         # Verify tool still exists with the same name
-        db_session_with_containers.refresh(created_tool)
+        db.session.refresh(created_tool)
         assert created_tool.name == first_tool_name
         assert created_tool.updated_at is not None
 
     def test_create_workflow_tool_with_file_parameter_default(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
+        self, db_session_with_containers, mock_external_service_dependencies
     ):
         """
         Test workflow tool creation with FILE parameter having a file object as default.
@@ -908,7 +916,7 @@ class TestWorkflowToolManageService:
         assert result == {"result": "success"}
 
     def test_create_workflow_tool_with_files_parameter_default(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
+        self, db_session_with_containers, mock_external_service_dependencies
     ):
         """
         Test workflow tool creation with FILES (Array[File]) parameter having file objects as default.
@@ -983,7 +991,7 @@ class TestWorkflowToolManageService:
         assert result == {"result": "success"}
 
     def test_create_workflow_tool_db_commit_before_validation(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
+        self, db_session_with_containers, mock_external_service_dependencies
     ):
         """
         Test that database commit happens before validation, causing DB pollution on validation failure.
@@ -1027,9 +1035,10 @@ class TestWorkflowToolManageService:
 
         # Verify the tool was NOT created in database
         # This is the expected behavior (no pollution)
+        from extensions.ext_database import db
 
         tool_count = (
-            db_session_with_containers.query(WorkflowToolProvider)
+            db.session.query(WorkflowToolProvider)
             .where(
                 WorkflowToolProvider.tenant_id == account.current_tenant.id,
                 WorkflowToolProvider.name == tool_name,

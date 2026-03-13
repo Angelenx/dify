@@ -9,11 +9,11 @@
  */
 import type { AppListResponse } from '@/models/app'
 import type { App } from '@/types/app'
-import { fireEvent, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { NuqsTestingAdapter } from 'nuqs/adapters/testing'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import List from '@/app/components/apps/list'
 import { AccessMode } from '@/models/access-control'
-import { renderWithNuqs } from '@/test/nuqs-testing'
 import { AppModeEnum } from '@/types/app'
 
 let mockIsCurrentWorkspaceEditor = true
@@ -90,10 +90,6 @@ vi.mock('@/service/use-apps', () => ({
     hasNextPage: false,
     error: null,
     refetch: mockRefetch,
-  }),
-  useDeleteAppMutation: () => ({
-    mutateAsync: vi.fn(),
-    isPending: false,
   }),
 }))
 
@@ -218,7 +214,11 @@ const createPage = (apps: App[]): AppListResponse => ({
 })
 
 const renderList = () => {
-  return renderWithNuqs(<List controlRefreshList={0} />)
+  return render(
+    <NuqsTestingAdapter>
+      <List controlRefreshList={0} />
+    </NuqsTestingAdapter>,
+  )
 }
 
 describe('Create App Flow', () => {

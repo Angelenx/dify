@@ -4,13 +4,15 @@ from typing import Any
 
 import pytest
 
-from core.workflow.node_factory import DifyNodeFactory
-from dify_graph.graph import Graph
-from dify_graph.graph.validation import GraphValidationError
-from dify_graph.nodes import NodeType
-from dify_graph.runtime import GraphRuntimeState, VariablePool
-from dify_graph.system_variable import SystemVariable
-from tests.workflow_test_utils import build_test_graph_init_params
+from core.app.entities.app_invoke_entities import InvokeFrom
+from core.app.workflow.node_factory import DifyNodeFactory
+from core.workflow.entities import GraphInitParams
+from core.workflow.graph import Graph
+from core.workflow.graph.validation import GraphValidationError
+from core.workflow.nodes import NodeType
+from core.workflow.runtime import GraphRuntimeState, VariablePool
+from core.workflow.system_variable import SystemVariable
+from models.enums import UserFrom
 
 
 def _build_iteration_graph(node_id: str) -> dict[str, Any]:
@@ -51,14 +53,14 @@ def _build_loop_graph(node_id: str) -> dict[str, Any]:
 
 
 def _make_factory(graph_config: dict[str, Any]) -> DifyNodeFactory:
-    graph_init_params = build_test_graph_init_params(
-        workflow_id="workflow",
-        graph_config=graph_config,
+    graph_init_params = GraphInitParams(
         tenant_id="tenant",
         app_id="app",
+        workflow_id="workflow",
+        graph_config=graph_config,
         user_id="user",
-        user_from="account",
-        invoke_from="debugger",
+        user_from=UserFrom.ACCOUNT,
+        invoke_from=InvokeFrom.DEBUGGER,
         call_depth=0,
     )
     graph_runtime_state = GraphRuntimeState(

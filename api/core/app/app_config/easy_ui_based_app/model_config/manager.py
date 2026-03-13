@@ -2,16 +2,15 @@ from collections.abc import Mapping
 from typing import Any
 
 from core.app.app_config.entities import ModelConfigEntity
+from core.model_runtime.entities.model_entities import ModelPropertyKey, ModelType
+from core.model_runtime.model_providers.model_provider_factory import ModelProviderFactory
 from core.provider_manager import ProviderManager
-from dify_graph.model_runtime.entities.model_entities import ModelPropertyKey, ModelType
-from dify_graph.model_runtime.model_providers.model_provider_factory import ModelProviderFactory
-from models.model import AppModelConfigDict
 from models.provider_ids import ModelProviderID
 
 
 class ModelConfigManager:
     @classmethod
-    def convert(cls, config: AppModelConfigDict) -> ModelConfigEntity:
+    def convert(cls, config: dict) -> ModelConfigEntity:
         """
         Convert model config to model config
 
@@ -23,7 +22,7 @@ class ModelConfigManager:
         if not model_config:
             raise ValueError("model is required")
 
-        completion_params = model_config.get("completion_params") or {}
+        completion_params = model_config.get("completion_params")
         stop = []
         if "stop" in completion_params:
             stop = completion_params["stop"]

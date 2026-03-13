@@ -31,7 +31,7 @@ vi.mock('@/app/components/workflow/store', () => ({
 }))
 
 const mockNotify = vi.fn()
-vi.mock('@/app/components/base/toast/context', () => ({
+vi.mock('@/app/components/base/toast', () => ({
   useToastContext: () => ({
     notify: mockNotify,
   }),

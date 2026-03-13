@@ -1,6 +1,6 @@
 from contextlib import contextmanager
 from datetime import datetime
-from typing import Any, Union
+from typing import Union
 from urllib.parse import urlparse
 
 from sqlalchemy import select
@@ -9,7 +9,7 @@ from models.engine import db
 from models.model import Message
 
 
-def filter_none_values(data: dict[str, Any]) -> dict[str, Any]:
+def filter_none_values(data: dict):
     new_data = {}
     for key, value in data.items():
         if value is None:

@@ -1,7 +1,8 @@
 import type { FC } from 'react'
 import type { SimpleDocumentDetail } from '@/models/datasets'
+import { RiEditLine } from '@remixicon/react'
 import { pick } from 'es-toolkit/object'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import * as React from 'react'
 import { useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -61,15 +62,13 @@ const DocumentTableRow: FC<DocumentTableRowProps> = React.memo(({
   const { t } = useTranslation()
   const { formatTime } = useTimestamp()
   const router = useRouter()
-  const searchParams = useSearchParams()
 
   const isFile = doc.data_source_type === DataSourceType.FILE
   const fileType = isFile ? doc.data_source_detail_dict?.upload_file?.extension : ''
-  const queryString = searchParams.toString()
 
   const handleRowClick = useCallback(() => {
-    router.push(`/datasets/${datasetId}/documents/${doc.id}${queryString ? `?${queryString}` : ''}`)
-  }, [router, datasetId, doc.id, queryString])
+    router.push(`/datasets/${datasetId}/documents/${doc.id}`)
+  }, [router, datasetId, doc.id])
 
   const handleCheckboxClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation()
@@ -101,7 +100,7 @@ const DocumentTableRow: FC<DocumentTableRowProps> = React.memo(({
             <DocumentSourceIcon doc={doc} fileType={fileType} />
           </div>
           <Tooltip popupContent={doc.name}>
-            <span className="grow truncate text-sm">{doc.name}</span>
+            <span className="grow-1 truncate text-sm">{doc.name}</span>
           </Tooltip>
           {doc.summary_index_status && (
             <div className="ml-1 hidden shrink-0 group-hover:flex">
@@ -114,7 +113,7 @@ const DocumentTableRow: FC<DocumentTableRowProps> = React.memo(({
                 className="cursor-pointer rounded-md p-1 hover:bg-state-base-hover"
                 onClick={handleRenameClick}
               >
-                <span className="i-ri-edit-line h-4 w-4 text-text-tertiary" />
+                <RiEditLine className="h-4 w-4 text-text-tertiary" />
               </div>
             </Tooltip>
           </div>

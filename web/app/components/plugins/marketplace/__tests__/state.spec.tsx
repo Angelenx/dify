@@ -2,8 +2,8 @@ import type { ReactNode } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { renderHook, waitFor } from '@testing-library/react'
 import { Provider as JotaiProvider } from 'jotai'
+import { NuqsTestingAdapter } from 'nuqs/adapters/testing'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { createNuqsTestWrapper } from '@/test/nuqs-testing'
 
 vi.mock('@/config', () => ({
   API_PREFIX: '/api',
@@ -37,7 +37,6 @@ vi.mock('@/service/client', () => ({
 }))
 
 const createWrapper = (searchParams = '') => {
-  const { wrapper: NuqsWrapper } = createNuqsTestWrapper({ searchParams })
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false, gcTime: 0 },
@@ -46,9 +45,9 @@ const createWrapper = (searchParams = '') => {
   const Wrapper = ({ children }: { children: ReactNode }) => (
     <JotaiProvider>
       <QueryClientProvider client={queryClient}>
-        <NuqsWrapper>
+        <NuqsTestingAdapter searchParams={searchParams}>
           {children}
-        </NuqsWrapper>
+        </NuqsTestingAdapter>
       </QueryClientProvider>
     </JotaiProvider>
   )

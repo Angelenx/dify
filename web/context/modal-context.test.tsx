@@ -1,9 +1,9 @@
-import { act, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
+import { NuqsTestingAdapter } from 'nuqs/adapters/testing'
 import * as React from 'react'
 import { defaultPlan } from '@/app/components/billing/config'
 import { Plan } from '@/app/components/billing/type'
-import { ModalContextProvider } from '@/context/modal-context-provider'
-import { renderWithNuqs } from '@/test/nuqs-testing'
+import { ModalContextProvider } from '@/context/modal-context'
 
 vi.mock('@/config', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/config')>()
@@ -71,10 +71,12 @@ const createPlan = (overrides: PlanOverrides = {}): PlanShape => ({
   },
 })
 
-const renderProvider = () => renderWithNuqs(
-  <ModalContextProvider>
-    <div data-testid="modal-context-test-child" />
-  </ModalContextProvider>,
+const renderProvider = () => render(
+  <NuqsTestingAdapter>
+    <ModalContextProvider>
+      <div data-testid="modal-context-test-child" />
+    </ModalContextProvider>
+  </NuqsTestingAdapter>,
 )
 
 describe('ModalContextProvider trigger events limit modal', () => {

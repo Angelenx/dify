@@ -15,7 +15,7 @@ import {
   useEffect,
 } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useToastContext } from '@/app/components/base/toast/context'
+import { useToastContext } from '@/app/components/base/toast'
 import { useNoteEditorStore } from '../../store'
 import { urlRegExp } from '../../utils'
 

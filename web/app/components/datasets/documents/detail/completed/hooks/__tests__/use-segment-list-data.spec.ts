@@ -92,7 +92,7 @@ vi.mock('../../../context', () => ({
   },
 }))
 
-vi.mock('@/app/components/base/toast/context', () => ({
+vi.mock('@/app/components/base/toast', () => ({
   useToastContext: () => ({ notify: mockNotify }),
 }))
 

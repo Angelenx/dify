@@ -9,7 +9,6 @@ const mocks = vi.hoisted(() => {
     documentError: null as Error | null,
     documentMetadata: null as Record<string, unknown> | null,
     media: 'desktop' as string,
-    searchParams: '' as string,
   }
   return {
     state,
@@ -27,7 +26,6 @@ const mocks = vi.hoisted(() => {
 // --- External mocks ---
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: mocks.push }),
-  useSearchParams: () => new URLSearchParams(mocks.state.searchParams),
 }))
 
 vi.mock('@/hooks/use-breakpoints', () => ({
@@ -195,7 +193,6 @@ describe('DocumentDetail', () => {
     mocks.state.documentError = null
     mocks.state.documentMetadata = null
     mocks.state.media = 'desktop'
-    mocks.state.searchParams = ''
   })
 
   afterEach(() => {
@@ -289,21 +286,13 @@ describe('DocumentDetail', () => {
     })
 
     it('should toggle metadata panel when button clicked', () => {
-      render(<DocumentDetail datasetId="ds-1" documentId="doc-1" />)
+      const { container } = render(<DocumentDetail datasetId="ds-1" documentId="doc-1" />)
       expect(screen.getByTestId('metadata')).toBeInTheDocument()
 
-      fireEvent.click(screen.getByTestId('document-detail-metadata-toggle'))
+      const svgs = container.querySelectorAll('svg')
+      const toggleBtn = svgs[svgs.length - 1].closest('button')!
+      fireEvent.click(toggleBtn)
       expect(screen.queryByTestId('metadata')).not.toBeInTheDocument()
-    })
-
-    it('should expose aria semantics for metadata toggle button', () => {
-      render(<DocumentDetail datasetId="ds-1" documentId="doc-1" />)
-      const toggle = screen.getByTestId('document-detail-metadata-toggle')
-      expect(toggle).toHaveAttribute('aria-label')
-      expect(toggle).toHaveAttribute('aria-pressed', 'true')
-
-      fireEvent.click(toggle)
-      expect(toggle).toHaveAttribute('aria-pressed', 'false')
     })
 
     it('should pass correct props to Metadata', () => {
@@ -316,21 +305,20 @@ describe('DocumentDetail', () => {
 
   describe('Navigation', () => {
     it('should navigate back when back button clicked', () => {
-      render(<DocumentDetail datasetId="ds-1" documentId="doc-1" />)
-      fireEvent.click(screen.getByTestId('document-detail-back-button'))
+      const { container } = render(<DocumentDetail datasetId="ds-1" documentId="doc-1" />)
+      const backBtn = container.querySelector('svg')!.parentElement!
+      fireEvent.click(backBtn)
       expect(mocks.push).toHaveBeenCalledWith('/datasets/ds-1/documents')
     })
 
-    it('should expose aria label for back button', () => {
-      render(<DocumentDetail datasetId="ds-1" documentId="doc-1" />)
-      expect(screen.getByTestId('document-detail-back-button')).toHaveAttribute('aria-label')
-    })
-
     it('should preserve query params when navigating back', () => {
-      mocks.state.searchParams = 'page=2&status=active'
-      render(<DocumentDetail datasetId="ds-1" documentId="doc-1" />)
-      fireEvent.click(screen.getByTestId('document-detail-back-button'))
+      const origLocation = window.location
+      window.history.pushState({}, '', '?page=2&status=active')
+      const { container } = render(<DocumentDetail datasetId="ds-1" documentId="doc-1" />)
+      const backBtn = container.querySelector('svg')!.parentElement!
+      fireEvent.click(backBtn)
       expect(mocks.push).toHaveBeenCalledWith('/datasets/ds-1/documents?page=2&status=active')
+      window.history.pushState({}, '', origLocation.href)
     })
   })
 

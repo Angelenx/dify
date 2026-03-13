@@ -14,7 +14,7 @@ vi.mock('@/context/app-context', () => ({
   useAppContext: vi.fn(),
 }))
 
-vi.mock('@/app/components/base/toast/context', () => ({
+vi.mock('@/app/components/base/toast', () => ({
   useToastContext: () => ({
     notify: vi.fn(),
   }),

@@ -5,12 +5,7 @@ from core.app.entities.app_invoke_entities import ModelConfigWithCredentialsEnti
 from core.helper.code_executor.jinja2.jinja2_formatter import Jinja2Formatter
 from core.memory.token_buffer_memory import TokenBufferMemory
 from core.model_manager import ModelInstance
-from core.prompt.entities.advanced_prompt_entities import ChatModelMessage, CompletionModelPromptTemplate, MemoryConfig
-from core.prompt.prompt_transform import PromptTransform
-from core.prompt.utils.prompt_template_parser import PromptTemplateParser
-from dify_graph.file import file_manager
-from dify_graph.file.models import File
-from dify_graph.model_runtime.entities import (
+from core.model_runtime.entities import (
     AssistantPromptMessage,
     PromptMessage,
     PromptMessageRole,
@@ -18,8 +13,13 @@ from dify_graph.model_runtime.entities import (
     TextPromptMessageContent,
     UserPromptMessage,
 )
-from dify_graph.model_runtime.entities.message_entities import ImagePromptMessageContent, PromptMessageContentUnionTypes
-from dify_graph.runtime import VariablePool
+from core.model_runtime.entities.message_entities import ImagePromptMessageContent, PromptMessageContentUnionTypes
+from core.prompt.entities.advanced_prompt_entities import ChatModelMessage, CompletionModelPromptTemplate, MemoryConfig
+from core.prompt.prompt_transform import PromptTransform
+from core.prompt.utils.prompt_template_parser import PromptTemplateParser
+from core.workflow.file import file_manager
+from core.workflow.file.models import File
+from core.workflow.runtime import VariablePool
 
 
 class AdvancedPromptTransform(PromptTransform):

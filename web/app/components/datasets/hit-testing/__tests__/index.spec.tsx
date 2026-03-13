@@ -579,20 +579,10 @@ describe('HitTestingPage', () => {
 })
 
 describe('Integration: Hit Testing Flow', () => {
-  beforeEach(async () => {
+  beforeEach(() => {
     vi.clearAllMocks()
     mockHitTestingMutateAsync.mockReset()
     mockExternalHitTestingMutateAsync.mockReset()
-
-    const { useHitTesting, useExternalKnowledgeBaseHitTesting } = await import('@/service/knowledge/use-hit-testing')
-    vi.mocked(useHitTesting).mockReturnValue({
-      mutateAsync: mockHitTestingMutateAsync,
-      isPending: false,
-    } as unknown as ReturnType<typeof useHitTesting>)
-    vi.mocked(useExternalKnowledgeBaseHitTesting).mockReturnValue({
-      mutateAsync: mockExternalHitTestingMutateAsync,
-      isPending: false,
-    } as unknown as ReturnType<typeof useExternalKnowledgeBaseHitTesting>)
   })
 
   it('should complete a full hit testing flow', async () => {
@@ -791,18 +781,8 @@ describe('Integration: Hit Testing Flow', () => {
 // Drawer and Modal Interaction Tests
 
 describe('Drawer and Modal Interactions', () => {
-  beforeEach(async () => {
+  beforeEach(() => {
     vi.clearAllMocks()
-
-    const { useHitTesting, useExternalKnowledgeBaseHitTesting } = await import('@/service/knowledge/use-hit-testing')
-    vi.mocked(useHitTesting).mockReturnValue({
-      mutateAsync: mockHitTestingMutateAsync,
-      isPending: false,
-    } as unknown as ReturnType<typeof useHitTesting>)
-    vi.mocked(useExternalKnowledgeBaseHitTesting).mockReturnValue({
-      mutateAsync: mockExternalHitTestingMutateAsync,
-      isPending: false,
-    } as unknown as ReturnType<typeof useExternalKnowledgeBaseHitTesting>)
   })
 
   it('should save retrieval config when ModifyRetrievalModal onSave is called', async () => {
@@ -848,19 +828,9 @@ describe('Drawer and Modal Interactions', () => {
 // renderHitResults Coverage Tests
 
 describe('renderHitResults Coverage', () => {
-  beforeEach(async () => {
+  beforeEach(() => {
     vi.clearAllMocks()
     mockHitTestingMutateAsync.mockReset()
-
-    const { useHitTesting, useExternalKnowledgeBaseHitTesting } = await import('@/service/knowledge/use-hit-testing')
-    vi.mocked(useHitTesting).mockReturnValue({
-      mutateAsync: mockHitTestingMutateAsync,
-      isPending: false,
-    } as unknown as ReturnType<typeof useHitTesting>)
-    vi.mocked(useExternalKnowledgeBaseHitTesting).mockReturnValue({
-      mutateAsync: mockExternalHitTestingMutateAsync,
-      isPending: false,
-    } as unknown as ReturnType<typeof useExternalKnowledgeBaseHitTesting>)
   })
 
   it('should render hit results panel with records count', async () => {
@@ -982,20 +952,10 @@ describe('ModifyRetrievalModal onSave Coverage', () => {
 // Direct Component Coverage Tests
 
 describe('HitTestingPage Internal Functions Coverage', () => {
-  beforeEach(async () => {
+  beforeEach(() => {
     vi.clearAllMocks()
     mockHitTestingMutateAsync.mockReset()
     mockExternalHitTestingMutateAsync.mockReset()
-
-    const { useHitTesting, useExternalKnowledgeBaseHitTesting } = await import('@/service/knowledge/use-hit-testing')
-    vi.mocked(useHitTesting).mockReturnValue({
-      mutateAsync: mockHitTestingMutateAsync,
-      isPending: false,
-    } as unknown as ReturnType<typeof useHitTesting>)
-    vi.mocked(useExternalKnowledgeBaseHitTesting).mockReturnValue({
-      mutateAsync: mockExternalHitTestingMutateAsync,
-      isPending: false,
-    } as unknown as ReturnType<typeof useExternalKnowledgeBaseHitTesting>)
   })
 
   it('should trigger renderHitResults when mutation succeeds with records', async () => {

@@ -14,8 +14,10 @@ import { useDebugConfigurationContext } from '@/context/debug-configuration'
 import { useEventEmitterContextContext } from '@/context/event-emitter'
 import { AppModeEnum } from '@/types/app'
 import { APP_CHAT_WITH_MULTIPLE_MODEL } from '../types'
-import { useDebugWithMultipleModelContext } from './context'
-import { DebugWithMultipleModelContextProvider } from './context-provider'
+import {
+  DebugWithMultipleModelContextProvider,
+  useDebugWithMultipleModelContext,
+} from './context'
 import DebugItem from './debug-item'
 
 const DebugWithMultipleModel = () => {

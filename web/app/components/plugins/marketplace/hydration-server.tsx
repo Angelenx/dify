@@ -1,5 +1,4 @@
 import type { SearchParams } from 'nuqs/server'
-import type { MarketplaceSearchParams } from './search-params'
 import { dehydrate, HydrationBoundary } from '@tanstack/react-query'
 import { createLoader } from 'nuqs/server'
 import { getQueryClientServer } from '@/context/query-client-server'
@@ -15,7 +14,7 @@ async function getDehydratedState(searchParams?: Promise<SearchParams>) {
     return
   }
   const loadSearchParams = createLoader(marketplaceSearchParamsParsers)
-  const params: MarketplaceSearchParams = await loadSearchParams(searchParams)
+  const params = await loadSearchParams(searchParams)
 
   if (!PLUGIN_CATEGORY_WITH_COLLECTIONS.has(params.category)) {
     return
@@ -38,10 +37,6 @@ export async function HydrateQueryClient({
   children: React.ReactNode
 }) {
   const dehydratedState = await getDehydratedState(searchParams)
-  // TODO: vinext do not handle hydration boundary well for now.
-  if (!dehydratedState) {
-    return <>{children}</>
-  }
   return (
     <HydrationBoundary state={dehydratedState}>
       {children}

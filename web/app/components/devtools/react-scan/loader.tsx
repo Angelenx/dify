@@ -1,15 +1,21 @@
-import Script from 'next/script'
+'use client'
+
+import { lazy, Suspense } from 'react'
 import { IS_DEV } from '@/config'
 
-export function ReactScanLoader() {
+const ReactScan = lazy(() =>
+  import('./scan').then(module => ({
+    default: module.ReactScan,
+  })),
+)
+
+export const ReactScanLoader = () => {
   if (!IS_DEV)
     return null
 
   return (
-    <Script
-      src="//unpkg.com/react-scan/dist/auto.global.js"
-      crossOrigin="anonymous"
-      strategy="beforeInteractive"
-    />
+    <Suspense fallback={null}>
+      <ReactScan />
+    </Suspense>
   )
 }

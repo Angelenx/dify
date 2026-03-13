@@ -52,7 +52,7 @@ vi.mock('../../hooks/use-credential', () => ({
 
 // Mock toast context
 const mockNotify = vi.fn()
-vi.mock('@/app/components/base/toast/context', () => ({
+vi.mock('@/app/components/base/toast', () => ({
   useToastContext: () => ({
     notify: mockNotify,
   }),

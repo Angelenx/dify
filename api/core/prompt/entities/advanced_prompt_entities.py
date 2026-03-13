@@ -2,7 +2,7 @@ from typing import Literal
 
 from pydantic import BaseModel
 
-from dify_graph.model_runtime.entities.message_entities import PromptMessageRole
+from core.model_runtime.entities.message_entities import PromptMessageRole
 
 
 class ChatModelMessage(BaseModel):

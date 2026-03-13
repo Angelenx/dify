@@ -1,8 +1,7 @@
 import type { ReactNode } from 'react'
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { useEventEmitterContextContext } from '@/context/event-emitter'
-import { EventEmitterContextProvider } from '@/context/event-emitter-provider'
+import { EventEmitterContextProvider, useEventEmitterContextContext } from '@/context/event-emitter'
 import RegenerationModal from '../regeneration-modal'
 
 // Store emit function for triggering events in tests

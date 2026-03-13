@@ -22,7 +22,7 @@ vi.mock('@/context/i18n', () => ({
 }))
 
 const mockNotify = vi.fn()
-vi.mock('@/app/components/base/toast/context', () => ({
+vi.mock('@/app/components/base/toast', () => ({
   useToastContext: () => ({
     notify: mockNotify,
   }),

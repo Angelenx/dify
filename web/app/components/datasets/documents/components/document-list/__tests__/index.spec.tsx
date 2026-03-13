@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import type { Props as PaginationProps } from '@/app/components/base/pagination'
 import type { SimpleDocumentDetail } from '@/models/datasets'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { act, fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ChunkingMode, DataSourceType } from '@/models/datasets'
 import DocumentList from '../../list'
@@ -13,7 +13,6 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({
     push: mockPush,
   }),
-  useSearchParams: () => new URLSearchParams(),
 }))
 
 vi.mock('@/context/dataset-detail', () => ({
@@ -91,8 +90,8 @@ describe('DocumentList', () => {
     pagination: defaultPagination,
     onUpdate: vi.fn(),
     onManageMetadata: vi.fn(),
-    remoteSortValue: '-created_at',
-    onSortChange: vi.fn(),
+    statusFilterValue: '',
+    remoteSortValue: '',
   }
 
   beforeEach(() => {
@@ -221,15 +220,16 @@ describe('DocumentList', () => {
       expect(sortIcons.length).toBeGreaterThan(0)
     })
 
-    it('should call onSortChange when sortable header is clicked', () => {
-      const onSortChange = vi.fn()
-      const { container } = render(<DocumentList {...defaultProps} onSortChange={onSortChange} />, { wrapper: createWrapper() })
+    it('should update sort order when sort header is clicked', () => {
+      render(<DocumentList {...defaultProps} />, { wrapper: createWrapper() })
 
-      const sortableHeaders = container.querySelectorAll('thead button')
-      if (sortableHeaders.length > 0)
+      // Find and click a sort header by its parent div containing the label text
+      const sortableHeaders = document.querySelectorAll('[class*="cursor-pointer"]')
+      if (sortableHeaders.length > 0) {
         fireEvent.click(sortableHeaders[0])
+      }
 
-      expect(onSortChange).toHaveBeenCalled()
+      expect(screen.getByRole('table')).toBeInTheDocument()
     })
   })
 
@@ -360,15 +360,13 @@ describe('DocumentList', () => {
       expect(modal).not.toBeInTheDocument()
     })
 
-    it('should show rename modal when rename button is clicked', async () => {
+    it('should show rename modal when rename button is clicked', () => {
       const { container } = render(<DocumentList {...defaultProps} />, { wrapper: createWrapper() })
 
       // Find and click the rename button in the first row
       const renameButtons = container.querySelectorAll('.cursor-pointer.rounded-md')
       if (renameButtons.length > 0) {
-        await act(async () => {
-          fireEvent.click(renameButtons[0])
-        })
+        fireEvent.click(renameButtons[0])
       }
 
       // After clicking rename, the modal should potentially be visible
@@ -386,7 +384,7 @@ describe('DocumentList', () => {
   })
 
   describe('Edit Metadata Modal', () => {
-    it('should handle edit metadata action', async () => {
+    it('should handle edit metadata action', () => {
       const props = {
         ...defaultProps,
         selectedIds: ['doc-1'],
@@ -395,9 +393,7 @@ describe('DocumentList', () => {
 
       const editButton = screen.queryByRole('button', { name: /metadata/i })
       if (editButton) {
-        await act(async () => {
-          fireEvent.click(editButton)
-        })
+        fireEvent.click(editButton)
       }
 
       expect(screen.getByRole('table')).toBeInTheDocument()
@@ -452,6 +448,16 @@ describe('DocumentList', () => {
       const props = {
         ...defaultProps,
         documents: [docWithMissingFields],
+      }
+      render(<DocumentList {...props} />, { wrapper: createWrapper() })
+
+      expect(screen.getByRole('table')).toBeInTheDocument()
+    })
+
+    it('should handle status filter value', () => {
+      const props = {
+        ...defaultProps,
+        statusFilterValue: 'completed',
       }
       render(<DocumentList {...props} />, { wrapper: createWrapper() })
 

@@ -1,5 +1,4 @@
 import type { InferContractRouterInputs } from '@orpc/contract'
-import { appDeleteContract } from './console/apps'
 import { bindPartnerStackContract, invoicesContract } from './console/billing'
 import {
   exploreAppDetailContract,
@@ -43,9 +42,6 @@ export type MarketPlaceInputs = InferContractRouterInputs<typeof marketplaceRout
 
 export const consoleRouterContract = {
   systemFeatures: systemFeaturesContract,
-  apps: {
-    deleteApp: appDeleteContract,
-  },
   explore: {
     apps: exploreAppsContract,
     appDetail: exploreAppDetailContract,

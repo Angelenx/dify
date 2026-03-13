@@ -16,7 +16,6 @@ from controllers.console.wraps import (
     only_edition_self_hosted,
     setup_required,
 )
-from controllers.console.app.wraps import edit_app_permission_required
 from models.account import AccountStatus
 from services.feature_service import LicenseStatus
 
@@ -395,90 +394,3 @@ class TestEnterpriseLicense:
             with pytest.raises(UnauthorizedAndForceLogout) as exc_info:
                 enterprise_feature()
             assert "license is invalid" in str(exc_info.value)
-
-
-class TestEditAppPermissionRequired:
-    """Tests for edit_app_permission_required decorator."""
-
-    def test_should_forbid_when_no_app_model_provided(self):
-        """When app_model is missing, decorator must deny access."""
-        from werkzeug.exceptions import Forbidden
-
-        mock_user = MagicMock()
-        mock_user.has_edit_permission = True
-        mock_user.is_admin_or_owner = False
-        mock_user.id = "user-1"
-
-        @edit_app_permission_required
-        def protected_view(*args, **kwargs):
-            return "ok"
-
-        with patch("controllers.console.app.wraps.current_user._get_current_object", return_value=mock_user), patch(
-            "controllers.console.app.wraps.current_user.has_edit_permission", new=True
-        ):
-            with pytest.raises(Forbidden):
-                protected_view()
-
-    def test_should_allow_admin_or_owner_when_app_model_present(self):
-        """Admin/owner with app_model present should be allowed."""
-        mock_user = MagicMock()
-        mock_user.has_edit_permission = True
-        mock_user.is_admin_or_owner = True
-        mock_user.id = "user-1"
-
-        app_model = MagicMock()
-        app_model.created_by = "other-user"
-
-        @edit_app_permission_required
-        def protected_view(*args, **kwargs):
-            return "ok"
-
-        with patch("controllers.console.app.wraps.current_user._get_current_object", return_value=mock_user), patch(
-            "controllers.console.app.wraps.current_user.has_edit_permission", new=True
-        ):
-            result = protected_view(app_model=app_model)
-
-        assert result == "ok"
-
-    def test_should_allow_creator_when_app_model_present(self):
-        """Creator of the app with edit permission should be allowed."""
-        mock_user = MagicMock()
-        mock_user.has_edit_permission = True
-        mock_user.is_admin_or_owner = False
-        mock_user.id = "creator-id"
-
-        app_model = MagicMock()
-        app_model.created_by = "creator-id"
-
-        @edit_app_permission_required
-        def protected_view(*args, **kwargs):
-            return "ok"
-
-        with patch("controllers.console.app.wraps.current_user._get_current_object", return_value=mock_user), patch(
-            "controllers.console.app.wraps.current_user.has_edit_permission", new=True
-        ):
-            result = protected_view(app_model=app_model)
-
-        assert result == "ok"
-
-    def test_should_forbid_non_creator_non_admin(self):
-        """Non-admin and non-creator should be forbidden even with app_model."""
-        from werkzeug.exceptions import Forbidden
-
-        mock_user = MagicMock()
-        mock_user.has_edit_permission = True
-        mock_user.is_admin_or_owner = False
-        mock_user.id = "user-1"
-
-        app_model = MagicMock()
-        app_model.created_by = "someone-else"
-
-        @edit_app_permission_required
-        def protected_view(*args, **kwargs):
-            return "ok"
-
-        with patch("controllers.console.app.wraps.current_user._get_current_object", return_value=mock_user), patch(
-            "controllers.console.app.wraps.current_user.has_edit_permission", new=True
-        ):
-            with pytest.raises(Forbidden):
-                protected_view(app_model=app_model)

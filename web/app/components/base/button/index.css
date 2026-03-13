@@ -2,11 +2,10 @@
 
 @layer components {
   .btn {
-    @apply inline-flex justify-center items-center cursor-pointer whitespace-nowrap
-    outline-none focus-visible:ring-2 focus-visible:ring-state-accent-solid;
+    @apply inline-flex justify-center items-center cursor-pointer whitespace-nowrap;
   }
 
-  .btn:is(:disabled, [data-disabled]) {
+  .btn-disabled {
     @apply cursor-not-allowed;
   }
 
@@ -41,7 +40,7 @@
     text-components-button-destructive-primary-text;
   }
 
-  .btn-primary:is(:disabled, [data-disabled]) {
+  .btn-primary.btn-disabled {
     @apply
     shadow-none
     bg-components-button-primary-bg-disabled
@@ -49,7 +48,7 @@
     text-components-button-primary-text-disabled;
   }
 
-  .btn-primary.btn-destructive:is(:disabled, [data-disabled]) {
+  .btn-primary.btn-destructive.btn-disabled {
     @apply
     shadow-none
     bg-components-button-destructive-primary-bg-disabled
@@ -69,7 +68,7 @@
     text-components-button-secondary-text;
   }
 
-  .btn-secondary:is(:disabled, [data-disabled]) {
+  .btn-secondary.btn-disabled {
     @apply
     backdrop-blur-sm
     bg-components-button-secondary-bg-disabled
@@ -86,7 +85,7 @@
     text-components-button-destructive-secondary-text;
   }
 
-  .btn-secondary.btn-destructive:is(:disabled, [data-disabled]) {
+  .btn-secondary.btn-destructive.btn-disabled {
     @apply
     bg-components-button-destructive-secondary-bg-disabled
     border-components-button-destructive-secondary-border-disabled
@@ -105,7 +104,7 @@
     text-components-button-secondary-accent-text;
   }
 
-  .btn-secondary-accent:is(:disabled, [data-disabled]) {
+  .btn-secondary-accent.btn-disabled {
     @apply
     bg-components-button-secondary-bg-disabled
     border-components-button-secondary-border-disabled
@@ -121,7 +120,7 @@
     text-components-button-destructive-primary-text;
   }
 
-  .btn-warning:is(:disabled, [data-disabled]) {
+  .btn-warning.btn-disabled {
     @apply
     bg-components-button-destructive-primary-bg-disabled
     border-components-button-destructive-primary-border-disabled
@@ -135,7 +134,7 @@
     text-components-button-tertiary-text;
   }
 
-  .btn-tertiary:is(:disabled, [data-disabled]) {
+  .btn-tertiary.btn-disabled {
     @apply
     bg-components-button-tertiary-bg-disabled
     text-components-button-tertiary-text-disabled;
@@ -148,7 +147,7 @@
     text-components-button-destructive-tertiary-text;
   }
 
-  .btn-tertiary.btn-destructive:is(:disabled, [data-disabled]) {
+  .btn-tertiary.btn-destructive.btn-disabled {
     @apply
     bg-components-button-destructive-tertiary-bg-disabled
     text-components-button-destructive-tertiary-text-disabled;
@@ -160,7 +159,7 @@
     text-components-button-ghost-text;
   }
 
-  .btn-ghost:is(:disabled, [data-disabled]) {
+  .btn-ghost.btn-disabled {
     @apply
     text-components-button-ghost-text-disabled;
   }
@@ -171,7 +170,7 @@
     text-components-button-destructive-ghost-text;
   }
 
-  .btn-ghost.btn-destructive:is(:disabled, [data-disabled]) {
+  .btn-ghost.btn-destructive.btn-disabled {
     @apply
     text-components-button-destructive-ghost-text-disabled;
   }
@@ -182,7 +181,7 @@
     text-components-button-secondary-accent-text;
   }
 
-  .btn-ghost-accent:is(:disabled, [data-disabled]) {
+  .btn-ghost-accent.btn-disabled {
     @apply
     text-components-button-secondary-accent-text-disabled;
   }

@@ -2,8 +2,7 @@ import type { ReactNode } from 'react'
 import { act, render, screen, waitFor } from '@testing-library/react'
 import { noop } from 'es-toolkit/function'
 import * as React from 'react'
-import Toast, { ToastProvider } from '..'
-import { useToastContext } from '../context'
+import Toast, { ToastProvider, useToastContext } from '..'
 
 const TestComponent = () => {
   const { notify, close } = useToastContext()

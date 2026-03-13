@@ -2,7 +2,7 @@
 
 from decimal import Decimal
 
-from dify_graph.model_runtime.entities.llm_entities import LLMUsage, LLMUsageMetadata
+from core.model_runtime.entities.llm_entities import LLMUsage, LLMUsageMetadata
 
 
 class TestLLMUsage:

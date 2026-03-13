@@ -13,19 +13,14 @@
  * - Use shallow routing to avoid unnecessary re-renders
  */
 
-import type { AccountSettingTab } from '@/app/components/header/account-setting/constants'
 import {
   createParser,
-  parseAsStringEnum,
-  parseAsStringLiteral,
+  parseAsString,
   useQueryState,
   useQueryStates,
 } from 'nuqs'
 import { useCallback } from 'react'
-import {
-  ACCOUNT_SETTING_MODAL_ACTION,
-  ACCOUNT_SETTING_TAB,
-} from '@/app/components/header/account-setting/constants'
+import { ACCOUNT_SETTING_MODAL_ACTION } from '@/app/components/header/account-setting/constants'
 import { isServer } from '@/utils/client'
 
 /**
@@ -57,10 +52,6 @@ export function usePricingModal() {
   )
 }
 
-const accountSettingTabValues = Object.values(ACCOUNT_SETTING_TAB) as AccountSettingTab[]
-const parseAsAccountSettingAction = parseAsStringLiteral([ACCOUNT_SETTING_MODAL_ACTION] as const)
-const parseAsAccountSettingTab = parseAsStringEnum<AccountSettingTab>(accountSettingTabValues)
-
 /**
  * Hook to manage account setting modal state via URL
  * @returns [state, setState] - Object with isOpen + payload (tab) and setter
@@ -70,11 +61,11 @@ const parseAsAccountSettingTab = parseAsStringEnum<AccountSettingTab>(accountSet
  * setAccountModalState({ payload: 'billing' }) // Sets ?action=showSettings&tab=billing
  * setAccountModalState(null) // Removes both params
  */
-export function useAccountSettingModal() {
+export function useAccountSettingModal<T extends string = string>() {
   const [accountState, setAccountState] = useQueryStates(
     {
-      action: parseAsAccountSettingAction,
-      tab: parseAsAccountSettingTab,
+      action: parseAsString,
+      tab: parseAsString,
     },
     {
       history: 'replace',
@@ -82,7 +73,7 @@ export function useAccountSettingModal() {
   )
 
   const setState = useCallback(
-    (state: { payload: AccountSettingTab } | null) => {
+    (state: { payload: T } | null) => {
       if (!state) {
         setAccountState({ action: null, tab: null }, { history: 'replace' })
         return
@@ -97,7 +88,7 @@ export function useAccountSettingModal() {
   )
 
   const isOpen = accountState.action === ACCOUNT_SETTING_MODAL_ACTION
-  const currentTab = isOpen ? accountState.tab : null
+  const currentTab = (isOpen ? accountState.tab : null) as T | null
 
   return [{ isOpen, payload: currentTab }, setState] as const
 }

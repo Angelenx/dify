@@ -10,7 +10,7 @@ export const generateMailToLink = (email: string, subject?: string, body?: strin
   return mailtoLink
 }
 
-export const mailToSupport = (account: string, plan: string, version: string, supportEmailAddress?: string) => {
+export const mailToSupport = (account: string, plan: string, version: string) => {
   const subject = `Technical Support Request ${plan} ${account}`
   const body = `
     Please do not remove the following information:
@@ -21,5 +21,5 @@ export const mailToSupport = (account: string, plan: string, version: string, su
     Platform:
     Problem Description:
   `
-  return generateMailToLink(supportEmailAddress || 'support@dify.ai', subject, body)
+  return generateMailToLink('support@dify.ai', subject, body)
 }

@@ -1,7 +1,7 @@
 import type { AnyFormApi } from '@tanstack/react-form'
 import type { FormSchema } from '@/app/components/base/form/types'
 import { useCallback } from 'react'
-import { useToastContext } from '@/app/components/base/toast/context'
+import { useToastContext } from '@/app/components/base/toast'
 
 export const useCheckValidated = (form: AnyFormApi, FormSchemas: FormSchema[]) => {
   const { notify } = useToastContext()

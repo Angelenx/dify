@@ -1,10 +1,8 @@
 import re
-from typing import cast
 
 from core.app.app_config.entities import ExternalDataVariableEntity
 from core.external_data_tool.factory import ExternalDataToolFactory
-from dify_graph.variables.input_entities import VariableEntity, VariableEntityType
-from models.model import AppModelConfigDict
+from core.workflow.variables.input_entities import VariableEntity, VariableEntityType
 
 _ALLOWED_VARIABLE_ENTITY_TYPE = frozenset(
     [
@@ -20,7 +18,7 @@ _ALLOWED_VARIABLE_ENTITY_TYPE = frozenset(
 
 class BasicVariablesConfigManager:
     @classmethod
-    def convert(cls, config: AppModelConfigDict) -> tuple[list[VariableEntity], list[ExternalDataVariableEntity]]:
+    def convert(cls, config: dict) -> tuple[list[VariableEntity], list[ExternalDataVariableEntity]]:
         """
         Convert model config to model config
 
@@ -53,9 +51,7 @@ class BasicVariablesConfigManager:
 
                 external_data_variables.append(
                     ExternalDataVariableEntity(
-                        variable=variable["variable"],
-                        type=variable.get("type", ""),
-                        config=variable.get("config", {}),
+                        variable=variable["variable"], type=variable["type"], config=variable["config"]
                     )
                 )
             elif variable_type in {
@@ -68,10 +64,10 @@ class BasicVariablesConfigManager:
                 variable = variables[variable_type]
                 variable_entities.append(
                     VariableEntity(
-                        type=cast(VariableEntityType, variable_type),
-                        variable=variable["variable"],
+                        type=variable_type,
+                        variable=variable.get("variable"),
                         description=variable.get("description") or "",
-                        label=variable["label"],
+                        label=variable.get("label"),
                         required=variable.get("required", False),
                         max_length=variable.get("max_length"),
                         options=variable.get("options") or [],

@@ -1,8 +1,9 @@
+import type { UrlUpdateEvent } from 'nuqs/adapters/testing'
 import type { ReactNode } from 'react'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { Provider as JotaiProvider } from 'jotai'
+import { NuqsTestingAdapter } from 'nuqs/adapters/testing'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { createNuqsTestWrapper } from '@/test/nuqs-testing'
 import PluginTypeSwitch from '../plugin-type-switch'
 
 vi.mock('#i18n', () => ({
@@ -24,15 +25,15 @@ vi.mock('#i18n', () => ({
 }))
 
 const createWrapper = (searchParams = '') => {
-  const { wrapper: NuqsWrapper } = createNuqsTestWrapper({ searchParams })
+  const onUrlUpdate = vi.fn<(event: UrlUpdateEvent) => void>()
   const Wrapper = ({ children }: { children: ReactNode }) => (
     <JotaiProvider>
-      <NuqsWrapper>
+      <NuqsTestingAdapter searchParams={searchParams} onUrlUpdate={onUrlUpdate}>
         {children}
-      </NuqsWrapper>
+      </NuqsTestingAdapter>
     </JotaiProvider>
   )
-  return { Wrapper }
+  return { Wrapper, onUrlUpdate }
 }
 
 describe('PluginTypeSwitch', () => {

@@ -11,11 +11,11 @@
 
 # import pytest
 
-# from dify_graph.entities.workflow_node_execution import (
+# from core.workflow.entities.workflow_node_execution import (
 #     WorkflowNodeExecution,
 #     WorkflowNodeExecutionStatus,
 # )
-# from dify_graph.enums import NodeType
+# from core.workflow.enums import NodeType
 # from libs.datetime_utils import naive_utc_now
 # from models import WorkflowNodeExecutionModel
 # from models.enums import ExecutionOffLoadType

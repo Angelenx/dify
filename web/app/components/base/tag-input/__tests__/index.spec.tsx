@@ -5,7 +5,7 @@ import TagInput from '../index'
 
 const mockNotify = vi.fn()
 
-vi.mock('@/app/components/base/toast/context', () => ({
+vi.mock('@/app/components/base/toast', () => ({
   useToastContext: () => ({
     notify: mockNotify,
   }),

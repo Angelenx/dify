@@ -1,17 +1,17 @@
 from core.plugin.backwards_invocation.base import BaseBackwardsInvocation
-from dify_graph.enums import NodeType
-from dify_graph.nodes.parameter_extractor.entities import (
+from core.workflow.enums import NodeType
+from core.workflow.nodes.parameter_extractor.entities import (
     ModelConfig as ParameterExtractorModelConfig,
 )
-from dify_graph.nodes.parameter_extractor.entities import (
+from core.workflow.nodes.parameter_extractor.entities import (
     ParameterConfig,
     ParameterExtractorNodeData,
 )
-from dify_graph.nodes.question_classifier.entities import (
+from core.workflow.nodes.question_classifier.entities import (
     ClassConfig,
     QuestionClassifierNodeData,
 )
-from dify_graph.nodes.question_classifier.entities import (
+from core.workflow.nodes.question_classifier.entities import (
     ModelConfig as QuestionClassifierModelConfig,
 )
 from services.workflow_service import WorkflowService

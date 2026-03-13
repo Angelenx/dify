@@ -10,7 +10,6 @@ from unittest.mock import MagicMock
 
 import pytest
 from faker import Faker
-from sqlalchemy.orm import Session
 
 from models import Account, App, Workflow
 from models.model import AppMode
@@ -33,7 +32,7 @@ class TestWorkflowService:
     and realistic testing environment with actual database interactions.
     """
 
-    def _create_test_account(self, db_session_with_containers: Session, fake=None):
+    def _create_test_account(self, db_session_with_containers, fake=None):
         """
         Helper method to create a test account with realistic data.
 
@@ -68,16 +67,18 @@ class TestWorkflowService:
         tenant.created_at = fake.date_time_this_year()
         tenant.updated_at = tenant.created_at
 
-        db_session_with_containers.add(tenant)
-        db_session_with_containers.add(account)
-        db_session_with_containers.commit()
+        from extensions.ext_database import db
+
+        db.session.add(tenant)
+        db.session.add(account)
+        db.session.commit()
 
         # Set the current tenant for the account
         account.current_tenant = tenant
 
         return account
 
-    def _create_test_app(self, db_session_with_containers: Session, fake=None):
+    def _create_test_app(self, db_session_with_containers, fake=None):
         """
         Helper method to create a test app with realistic data.
 
@@ -105,11 +106,13 @@ class TestWorkflowService:
         )
         app.updated_by = app.created_by
 
-        db_session_with_containers.add(app)
-        db_session_with_containers.commit()
+        from extensions.ext_database import db
+
+        db.session.add(app)
+        db.session.commit()
         return app
 
-    def _create_test_workflow(self, db_session_with_containers: Session, app, account, fake=None):
+    def _create_test_workflow(self, db_session_with_containers, app, account, fake=None):
         """
         Helper method to create a test workflow associated with an app.
 
@@ -138,11 +141,13 @@ class TestWorkflowService:
             conversation_variables=[],
         )
 
-        db_session_with_containers.add(workflow)
-        db_session_with_containers.commit()
+        from extensions.ext_database import db
+
+        db.session.add(workflow)
+        db.session.commit()
         return workflow
 
-    def test_get_node_last_run_success(self, db_session_with_containers: Session):
+    def test_get_node_last_run_success(self, db_session_with_containers):
         """
         Test successful retrieval of the most recent execution for a specific node.
 
@@ -175,8 +180,10 @@ class TestWorkflowService:
         node_execution.created_by = account.id  # Required field
         node_execution.created_at = fake.date_time_this_year()
 
-        db_session_with_containers.add(node_execution)
-        db_session_with_containers.commit()
+        from extensions.ext_database import db
+
+        db.session.add(node_execution)
+        db.session.commit()
 
         workflow_service = WorkflowService()
 
@@ -189,7 +196,7 @@ class TestWorkflowService:
         assert result.workflow_id == workflow.id
         assert result.status == "succeeded"
 
-    def test_get_node_last_run_not_found(self, db_session_with_containers: Session):
+    def test_get_node_last_run_not_found(self, db_session_with_containers):
         """
         Test retrieval when no execution record exists for the specified node.
 
@@ -210,7 +217,7 @@ class TestWorkflowService:
         # Assert
         assert result is None
 
-    def test_is_workflow_exist_true(self, db_session_with_containers: Session):
+    def test_is_workflow_exist_true(self, db_session_with_containers):
         """
         Test workflow existence check when a draft workflow exists.
 
@@ -231,7 +238,7 @@ class TestWorkflowService:
         # Assert
         assert result is True
 
-    def test_is_workflow_exist_false(self, db_session_with_containers: Session):
+    def test_is_workflow_exist_false(self, db_session_with_containers):
         """
         Test workflow existence check when no draft workflow exists.
 
@@ -251,7 +258,7 @@ class TestWorkflowService:
         # Assert
         assert result is False
 
-    def test_get_draft_workflow_success(self, db_session_with_containers: Session):
+    def test_get_draft_workflow_success(self, db_session_with_containers):
         """
         Test successful retrieval of a draft workflow.
 
@@ -277,7 +284,7 @@ class TestWorkflowService:
         assert result.app_id == app.id
         assert result.tenant_id == app.tenant_id
 
-    def test_get_draft_workflow_not_found(self, db_session_with_containers: Session):
+    def test_get_draft_workflow_not_found(self, db_session_with_containers):
         """
         Test draft workflow retrieval when no draft workflow exists.
 
@@ -297,7 +304,7 @@ class TestWorkflowService:
         # Assert
         assert result is None
 
-    def test_get_published_workflow_by_id_success(self, db_session_with_containers: Session):
+    def test_get_published_workflow_by_id_success(self, db_session_with_containers):
         """
         Test successful retrieval of a published workflow by ID.
 
@@ -314,7 +321,9 @@ class TestWorkflowService:
         workflow = self._create_test_workflow(db_session_with_containers, app, account, fake)
         workflow.version = "2024.01.01.001"  # Published version
 
-        db_session_with_containers.commit()
+        from extensions.ext_database import db
+
+        db.session.commit()
 
         workflow_service = WorkflowService()
 
@@ -327,7 +336,7 @@ class TestWorkflowService:
         assert result.version != Workflow.VERSION_DRAFT
         assert result.app_id == app.id
 
-    def test_get_published_workflow_by_id_draft_error(self, db_session_with_containers: Session):
+    def test_get_published_workflow_by_id_draft_error(self, db_session_with_containers):
         """
         Test error when trying to retrieve a draft workflow as published.
 
@@ -350,7 +359,7 @@ class TestWorkflowService:
         with pytest.raises(IsDraftWorkflowError):
             workflow_service.get_published_workflow_by_id(app, workflow.id)
 
-    def test_get_published_workflow_by_id_not_found(self, db_session_with_containers: Session):
+    def test_get_published_workflow_by_id_not_found(self, db_session_with_containers):
         """
         Test retrieval when no workflow exists with the specified ID.
 
@@ -370,7 +379,7 @@ class TestWorkflowService:
         # Assert
         assert result is None
 
-    def test_get_published_workflow_success(self, db_session_with_containers: Session):
+    def test_get_published_workflow_success(self, db_session_with_containers):
         """
         Test successful retrieval of the current published workflow for an app.
 
@@ -386,8 +395,10 @@ class TestWorkflowService:
         workflow = self._create_test_workflow(db_session_with_containers, app, account, fake)
         workflow.version = "2024.01.01.001"  # Published version
 
+        from extensions.ext_database import db
+
         app.workflow_id = workflow.id
-        db_session_with_containers.commit()
+        db.session.commit()
 
         workflow_service = WorkflowService()
 
@@ -400,7 +411,7 @@ class TestWorkflowService:
         assert result.version != Workflow.VERSION_DRAFT
         assert result.app_id == app.id
 
-    def test_get_published_workflow_no_workflow_id(self, db_session_with_containers: Session):
+    def test_get_published_workflow_no_workflow_id(self, db_session_with_containers):
         """
         Test retrieval when app has no associated workflow ID.
 
@@ -420,7 +431,7 @@ class TestWorkflowService:
         # Assert
         assert result is None
 
-    def test_get_all_published_workflow_pagination(self, db_session_with_containers: Session):
+    def test_get_all_published_workflow_pagination(self, db_session_with_containers):
         """
         Test pagination of published workflows.
 
@@ -444,13 +455,15 @@ class TestWorkflowService:
         # Set the app's workflow_id to the first workflow
         app.workflow_id = workflows[0].id
 
-        db_session_with_containers.commit()
+        from extensions.ext_database import db
+
+        db.session.commit()
 
         workflow_service = WorkflowService()
 
         # Act - First page
         result_workflows, has_more = workflow_service.get_all_published_workflow(
-            session=db_session_with_containers,
+            session=db.session,
             app_model=app,
             page=1,
             limit=3,
@@ -463,7 +476,7 @@ class TestWorkflowService:
 
         # Act - Second page
         result_workflows, has_more = workflow_service.get_all_published_workflow(
-            session=db_session_with_containers,
+            session=db.session,
             app_model=app,
             page=2,
             limit=3,
@@ -474,7 +487,7 @@ class TestWorkflowService:
         assert len(result_workflows) == 2
         assert has_more is False
 
-    def test_get_all_published_workflow_user_filter(self, db_session_with_containers: Session):
+    def test_get_all_published_workflow_user_filter(self, db_session_with_containers):
         """
         Test filtering published workflows by user.
 
@@ -500,20 +513,22 @@ class TestWorkflowService:
         # Set the app's workflow_id to the first workflow
         app.workflow_id = workflow1.id
 
-        db_session_with_containers.commit()
+        from extensions.ext_database import db
+
+        db.session.commit()
 
         workflow_service = WorkflowService()
 
         # Act - Filter by account1
         result_workflows, has_more = workflow_service.get_all_published_workflow(
-            session=db_session_with_containers, app_model=app, page=1, limit=10, user_id=account1.id
+            session=db.session, app_model=app, page=1, limit=10, user_id=account1.id
         )
 
         # Assert
         assert len(result_workflows) == 1
         assert result_workflows[0].created_by == account1.id
 
-    def test_get_all_published_workflow_named_only_filter(self, db_session_with_containers: Session):
+    def test_get_all_published_workflow_named_only_filter(self, db_session_with_containers):
         """
         Test filtering published workflows to show only named workflows.
 
@@ -542,20 +557,22 @@ class TestWorkflowService:
         # Set the app's workflow_id to the first workflow
         app.workflow_id = workflow1.id
 
-        db_session_with_containers.commit()
+        from extensions.ext_database import db
+
+        db.session.commit()
 
         workflow_service = WorkflowService()
 
         # Act - Filter named only
         result_workflows, has_more = workflow_service.get_all_published_workflow(
-            session=db_session_with_containers, app_model=app, page=1, limit=10, user_id=None, named_only=True
+            session=db.session, app_model=app, page=1, limit=10, user_id=None, named_only=True
         )
 
         # Assert
         assert len(result_workflows) == 2
         assert all(wf.marked_name for wf in result_workflows)
 
-    def test_sync_draft_workflow_create_new(self, db_session_with_containers: Session):
+    def test_sync_draft_workflow_create_new(self, db_session_with_containers):
         """
         Test creating a new draft workflow through sync operation.
 
@@ -607,7 +624,7 @@ class TestWorkflowService:
         assert result.features == json.dumps(features)
         assert result.created_by == account.id
 
-    def test_sync_draft_workflow_update_existing(self, db_session_with_containers: Session):
+    def test_sync_draft_workflow_update_existing(self, db_session_with_containers):
         """
         Test updating an existing draft workflow through sync operation.
 
@@ -671,7 +688,7 @@ class TestWorkflowService:
         assert result.features == json.dumps(new_features)
         assert result.updated_by == account.id
 
-    def test_sync_draft_workflow_hash_mismatch_error(self, db_session_with_containers: Session):
+    def test_sync_draft_workflow_hash_mismatch_error(self, db_session_with_containers):
         """
         Test error when sync is attempted with mismatched hash.
 
@@ -721,7 +738,7 @@ class TestWorkflowService:
                 conversation_variables=conversation_variables,
             )
 
-    def test_publish_workflow_success(self, db_session_with_containers: Session):
+    def test_publish_workflow_success(self, db_session_with_containers):
         """
         Test successful workflow publishing.
 
@@ -738,7 +755,9 @@ class TestWorkflowService:
         workflow = self._create_test_workflow(db_session_with_containers, app, account, fake)
         workflow.version = Workflow.VERSION_DRAFT
 
-        db_session_with_containers.commit()
+        from extensions.ext_database import db
+
+        db.session.commit()
 
         workflow_service = WorkflowService()
 
@@ -758,7 +777,7 @@ class TestWorkflowService:
         assert len(result.version) > 10  # Should be a reasonable timestamp length
         assert result.created_by == account.id
 
-    def test_publish_workflow_no_draft_error(self, db_session_with_containers: Session):
+    def test_publish_workflow_no_draft_error(self, db_session_with_containers):
         """
         Test error when publishing workflow without draft.
 
@@ -778,7 +797,7 @@ class TestWorkflowService:
         with pytest.raises(ValueError, match="No valid workflow found"):
             workflow_service.publish_workflow(session=db_session_with_containers, app_model=app, account=account)
 
-    def test_publish_workflow_already_published_error(self, db_session_with_containers: Session):
+    def test_publish_workflow_already_published_error(self, db_session_with_containers):
         """
         Test error when publishing already published workflow.
 
@@ -794,7 +813,9 @@ class TestWorkflowService:
         workflow = self._create_test_workflow(db_session_with_containers, app, account, fake)
         workflow.version = "2024.01.01.001"  # Already published
 
-        db_session_with_containers.commit()
+        from extensions.ext_database import db
+
+        db.session.commit()
 
         workflow_service = WorkflowService()
 
@@ -802,7 +823,7 @@ class TestWorkflowService:
         with pytest.raises(ValueError, match="No valid workflow found"):
             workflow_service.publish_workflow(session=db_session_with_containers, app_model=app, account=account)
 
-    def test_get_default_block_configs(self, db_session_with_containers: Session):
+    def test_get_default_block_configs(self, db_session_with_containers):
         """
         Test retrieval of default block configurations for all node types.
 
@@ -826,7 +847,7 @@ class TestWorkflowService:
             assert isinstance(config, dict)
             # The structure can vary, so we just check it's a dict
 
-    def test_get_default_block_config_specific_type(self, db_session_with_containers: Session):
+    def test_get_default_block_config_specific_type(self, db_session_with_containers):
         """
         Test retrieval of default block configuration for a specific node type.
 
@@ -846,7 +867,7 @@ class TestWorkflowService:
         # This is acceptable behavior
         assert result is None or isinstance(result, dict)
 
-    def test_get_default_block_config_invalid_type(self, db_session_with_containers: Session):
+    def test_get_default_block_config_invalid_type(self, db_session_with_containers):
         """
         Test retrieval of default block configuration for invalid node type.
 
@@ -866,7 +887,7 @@ class TestWorkflowService:
             # It's also acceptable for the service to raise a ValueError for invalid types
             pass
 
-    def test_get_default_block_config_with_filters(self, db_session_with_containers: Session):
+    def test_get_default_block_config_with_filters(self, db_session_with_containers):
         """
         Test retrieval of default block configuration with filters.
 
@@ -886,7 +907,7 @@ class TestWorkflowService:
         # Result might be None if filters don't match, but should not raise error
         assert result is None or isinstance(result, dict)
 
-    def test_convert_to_workflow_chat_mode_success(self, db_session_with_containers: Session):
+    def test_convert_to_workflow_chat_mode_success(self, db_session_with_containers):
         """
         Test successful conversion from chat mode app to workflow mode.
 
@@ -923,9 +944,11 @@ class TestWorkflowService:
         )
         app_model_config.id = fake.uuid4()
 
-        db_session_with_containers.add(app_model_config)
+        from extensions.ext_database import db
+
+        db.session.add(app_model_config)
         app.app_model_config_id = app_model_config.id
-        db_session_with_containers.commit()
+        db.session.commit()
 
         workflow_service = WorkflowService()
         conversion_args = {
@@ -946,7 +969,7 @@ class TestWorkflowService:
         assert result.icon_type == conversion_args["icon_type"]
         assert result.icon_background == conversion_args["icon_background"]
 
-    def test_convert_to_workflow_completion_mode_success(self, db_session_with_containers: Session):
+    def test_convert_to_workflow_completion_mode_success(self, db_session_with_containers):
         """
         Test successful conversion from completion mode app to workflow mode.
 
@@ -983,9 +1006,11 @@ class TestWorkflowService:
         )
         app_model_config.id = fake.uuid4()
 
-        db_session_with_containers.add(app_model_config)
+        from extensions.ext_database import db
+
+        db.session.add(app_model_config)
         app.app_model_config_id = app_model_config.id
-        db_session_with_containers.commit()
+        db.session.commit()
 
         workflow_service = WorkflowService()
         conversion_args = {
@@ -1006,7 +1031,7 @@ class TestWorkflowService:
         assert result.icon_type == conversion_args["icon_type"]
         assert result.icon_background == conversion_args["icon_background"]
 
-    def test_convert_to_workflow_unsupported_mode_error(self, db_session_with_containers: Session):
+    def test_convert_to_workflow_unsupported_mode_error(self, db_session_with_containers):
         """
         Test error when attempting to convert unsupported app mode.
 
@@ -1021,7 +1046,9 @@ class TestWorkflowService:
         app = self._create_test_app(db_session_with_containers, fake)
         app.mode = AppMode.WORKFLOW
 
-        db_session_with_containers.commit()
+        from extensions.ext_database import db
+
+        db.session.commit()
 
         workflow_service = WorkflowService()
         conversion_args = {"name": "Test"}
@@ -1030,7 +1057,7 @@ class TestWorkflowService:
         with pytest.raises(ValueError, match="Current App mode: workflow is not supported convert to workflow"):
             workflow_service.convert_to_workflow(app_model=app, account=account, args=conversion_args)
 
-    def test_validate_features_structure_advanced_chat(self, db_session_with_containers: Session):
+    def test_validate_features_structure_advanced_chat(self, db_session_with_containers):
         """
         Test feature structure validation for advanced chat mode apps.
 
@@ -1042,7 +1069,9 @@ class TestWorkflowService:
         app = self._create_test_app(db_session_with_containers, fake)
         app.mode = AppMode.ADVANCED_CHAT
 
-        db_session_with_containers.commit()
+        from extensions.ext_database import db
+
+        db.session.commit()
 
         workflow_service = WorkflowService()
         features = {
@@ -1059,7 +1088,7 @@ class TestWorkflowService:
         # The exact behavior depends on the AdvancedChatAppConfigManager implementation
         assert result is not None or isinstance(result, dict)
 
-    def test_validate_features_structure_workflow(self, db_session_with_containers: Session):
+    def test_validate_features_structure_workflow(self, db_session_with_containers):
         """
         Test feature structure validation for workflow mode apps.
 
@@ -1071,7 +1100,9 @@ class TestWorkflowService:
         app = self._create_test_app(db_session_with_containers, fake)
         app.mode = AppMode.WORKFLOW
 
-        db_session_with_containers.commit()
+        from extensions.ext_database import db
+
+        db.session.commit()
 
         workflow_service = WorkflowService()
         features = {"workflow_config": {"max_steps": 10, "timeout": 300}}
@@ -1084,7 +1115,7 @@ class TestWorkflowService:
         # The exact behavior depends on the WorkflowAppConfigManager implementation
         assert result is not None or isinstance(result, dict)
 
-    def test_validate_features_structure_invalid_mode(self, db_session_with_containers: Session):
+    def test_validate_features_structure_invalid_mode(self, db_session_with_containers):
         """
         Test error when validating features for invalid app mode.
 
@@ -1096,7 +1127,9 @@ class TestWorkflowService:
         app = self._create_test_app(db_session_with_containers, fake)
         app.mode = "invalid_mode"  # Invalid mode
 
-        db_session_with_containers.commit()
+        from extensions.ext_database import db
+
+        db.session.commit()
 
         workflow_service = WorkflowService()
         features = {"test": "value"}
@@ -1105,7 +1138,7 @@ class TestWorkflowService:
         with pytest.raises(ValueError, match="Invalid app mode: invalid_mode"):
             workflow_service.validate_features_structure(app_model=app, features=features)
 
-    def test_update_workflow_success(self, db_session_with_containers: Session):
+    def test_update_workflow_success(self, db_session_with_containers):
         """
         Test successful workflow update with allowed fields.
 
@@ -1119,14 +1152,16 @@ class TestWorkflowService:
         app = self._create_test_app(db_session_with_containers, fake)
         workflow = self._create_test_workflow(db_session_with_containers, app, account, fake)
 
-        db_session_with_containers.commit()
+        from extensions.ext_database import db
+
+        db.session.commit()
 
         workflow_service = WorkflowService()
         update_data = {"marked_name": "Updated Workflow Name", "marked_comment": "Updated workflow comment"}
 
         # Act
         result = workflow_service.update_workflow(
-            session=db_session_with_containers,
+            session=db.session,
             workflow_id=workflow.id,
             tenant_id=workflow.tenant_id,
             account_id=account.id,
@@ -1139,7 +1174,7 @@ class TestWorkflowService:
         assert result.marked_comment == update_data["marked_comment"]
         assert result.updated_by == account.id
 
-    def test_update_workflow_not_found(self, db_session_with_containers: Session):
+    def test_update_workflow_not_found(self, db_session_with_containers):
         """
         Test workflow update when workflow doesn't exist.
 
@@ -1151,13 +1186,15 @@ class TestWorkflowService:
         account = self._create_test_account(db_session_with_containers, fake)
         app = self._create_test_app(db_session_with_containers, fake)
 
+        from extensions.ext_database import db
+
         workflow_service = WorkflowService()
         non_existent_workflow_id = fake.uuid4()
         update_data = {"marked_name": "Test"}
 
         # Act
         result = workflow_service.update_workflow(
-            session=db_session_with_containers,
+            session=db.session,
             workflow_id=non_existent_workflow_id,
             tenant_id=app.tenant_id,
             account_id=account.id,
@@ -1167,7 +1204,7 @@ class TestWorkflowService:
         # Assert
         assert result is None
 
-    def test_update_workflow_ignores_disallowed_fields(self, db_session_with_containers: Session):
+    def test_update_workflow_ignores_disallowed_fields(self, db_session_with_containers):
         """
         Test that workflow update ignores disallowed fields.
 
@@ -1181,7 +1218,9 @@ class TestWorkflowService:
         workflow = self._create_test_workflow(db_session_with_containers, app, account, fake)
         original_name = workflow.marked_name
 
-        db_session_with_containers.commit()
+        from extensions.ext_database import db
+
+        db.session.commit()
 
         workflow_service = WorkflowService()
         update_data = {
@@ -1192,7 +1231,7 @@ class TestWorkflowService:
 
         # Act
         result = workflow_service.update_workflow(
-            session=db_session_with_containers,
+            session=db.session,
             workflow_id=workflow.id,
             tenant_id=workflow.tenant_id,
             account_id=account.id,
@@ -1206,7 +1245,7 @@ class TestWorkflowService:
         assert result.graph == workflow.graph
         assert result.features == workflow.features
 
-    def test_delete_workflow_success(self, db_session_with_containers: Session):
+    def test_delete_workflow_success(self, db_session_with_containers):
         """
         Test successful workflow deletion.
 
@@ -1223,23 +1262,25 @@ class TestWorkflowService:
         workflow = self._create_test_workflow(db_session_with_containers, app, account, fake)
         workflow.version = "2024.01.01.001"  # Published version
 
-        db_session_with_containers.commit()
+        from extensions.ext_database import db
+
+        db.session.commit()
 
         workflow_service = WorkflowService()
 
         # Act
         result = workflow_service.delete_workflow(
-            session=db_session_with_containers, workflow_id=workflow.id, tenant_id=workflow.tenant_id
+            session=db.session, workflow_id=workflow.id, tenant_id=workflow.tenant_id
         )
 
         # Assert
         assert result is True
 
         # Verify workflow is actually deleted
-        deleted_workflow = db_session_with_containers.query(Workflow).filter_by(id=workflow.id).first()
+        deleted_workflow = db.session.query(Workflow).filter_by(id=workflow.id).first()
         assert deleted_workflow is None
 
-    def test_delete_workflow_draft_error(self, db_session_with_containers: Session):
+    def test_delete_workflow_draft_error(self, db_session_with_containers):
         """
         Test error when attempting to delete a draft workflow.
 
@@ -1255,7 +1296,9 @@ class TestWorkflowService:
         workflow = self._create_test_workflow(db_session_with_containers, app, account, fake)
         # Keep as draft version
 
-        db_session_with_containers.commit()
+        from extensions.ext_database import db
+
+        db.session.commit()
 
         workflow_service = WorkflowService()
 
@@ -1263,11 +1306,9 @@ class TestWorkflowService:
         from services.errors.workflow_service import DraftWorkflowDeletionError
 
         with pytest.raises(DraftWorkflowDeletionError, match="Cannot delete draft workflow versions"):
-            workflow_service.delete_workflow(
-                session=db_session_with_containers, workflow_id=workflow.id, tenant_id=workflow.tenant_id
-            )
+            workflow_service.delete_workflow(session=db.session, workflow_id=workflow.id, tenant_id=workflow.tenant_id)
 
-    def test_delete_workflow_in_use_error(self, db_session_with_containers: Session):
+    def test_delete_workflow_in_use_error(self, db_session_with_containers):
         """
         Test error when attempting to delete a workflow that's in use by an app.
 
@@ -1286,7 +1327,9 @@ class TestWorkflowService:
         # Associate workflow with app
         app.workflow_id = workflow.id
 
-        db_session_with_containers.commit()
+        from extensions.ext_database import db
+
+        db.session.commit()
 
         workflow_service = WorkflowService()
 
@@ -1294,11 +1337,9 @@ class TestWorkflowService:
         from services.errors.workflow_service import WorkflowInUseError
 
         with pytest.raises(WorkflowInUseError, match="Cannot delete workflow that is currently in use by app"):
-            workflow_service.delete_workflow(
-                session=db_session_with_containers, workflow_id=workflow.id, tenant_id=workflow.tenant_id
-            )
+            workflow_service.delete_workflow(session=db.session, workflow_id=workflow.id, tenant_id=workflow.tenant_id)
 
-    def test_delete_workflow_not_found_error(self, db_session_with_containers: Session):
+    def test_delete_workflow_not_found_error(self, db_session_with_containers):
         """
         Test error when attempting to delete a non-existent workflow.
 
@@ -1310,15 +1351,17 @@ class TestWorkflowService:
         app = self._create_test_app(db_session_with_containers, fake)
         non_existent_workflow_id = fake.uuid4()
 
+        from extensions.ext_database import db
+
         workflow_service = WorkflowService()
 
         # Act & Assert
         with pytest.raises(ValueError, match=f"Workflow with ID {non_existent_workflow_id} not found"):
             workflow_service.delete_workflow(
-                session=db_session_with_containers, workflow_id=non_existent_workflow_id, tenant_id=app.tenant_id
+                session=db.session, workflow_id=non_existent_workflow_id, tenant_id=app.tenant_id
             )
 
-    def test_run_free_workflow_node_success(self, db_session_with_containers: Session):
+    def test_run_free_workflow_node_success(self, db_session_with_containers):
         """
         Test successful execution of a free workflow node.
 
@@ -1350,8 +1393,8 @@ class TestWorkflowService:
 
         from unittest.mock import patch
 
+        from core.app.workflow.node_factory import DifyNodeFactory
         from core.model_manager import ModelInstance
-        from core.workflow.node_factory import DifyNodeFactory
 
         # Act
         with patch.object(
@@ -1370,7 +1413,7 @@ class TestWorkflowService:
         assert result.workflow_id == ""  # No workflow ID for free nodes
         assert result.index == 1
 
-    def test_run_free_workflow_node_with_complex_inputs(self, db_session_with_containers: Session):
+    def test_run_free_workflow_node_with_complex_inputs(self, db_session_with_containers):
         """
         Test execution of a free workflow node with complex input data.
 
@@ -1411,7 +1454,7 @@ class TestWorkflowService:
         error_msg = str(exc_info.value).lower()
         assert any(keyword in error_msg for keyword in ["start", "not supported", "external"])
 
-    def test_handle_node_run_result_success(self, db_session_with_containers: Session):
+    def test_handle_node_run_result_success(self, db_session_with_containers):
         """
         Test successful handling of node run results.
 
@@ -1429,10 +1472,10 @@ class TestWorkflowService:
             import uuid
             from datetime import datetime
 
-            from dify_graph.enums import NodeType, WorkflowNodeExecutionStatus
-            from dify_graph.graph_events import NodeRunSucceededEvent
-            from dify_graph.node_events import NodeRunResult
-            from dify_graph.nodes.base.node import Node
+            from core.workflow.enums import NodeType, WorkflowNodeExecutionStatus
+            from core.workflow.graph_events import NodeRunSucceededEvent
+            from core.workflow.node_events import NodeRunResult
+            from core.workflow.nodes.base.node import Node
 
             # Create mock node
             mock_node = MagicMock(spec=Node)
@@ -1474,19 +1517,19 @@ class TestWorkflowService:
         # Assert
         assert result is not None
         assert result.node_id == node_id
-        from dify_graph.enums import NodeType
+        from core.workflow.enums import NodeType
 
         assert result.node_type == NodeType.START  # Should match the mock node type
         assert result.title == "Test Node"
         # Import the enum for comparison
-        from dify_graph.enums import WorkflowNodeExecutionStatus
+        from core.workflow.enums import WorkflowNodeExecutionStatus
 
         assert result.status == WorkflowNodeExecutionStatus.SUCCEEDED
         assert result.inputs is not None
         assert result.outputs is not None
         assert result.process_data is not None
 
-    def test_handle_node_run_result_failure(self, db_session_with_containers: Session):
+    def test_handle_node_run_result_failure(self, db_session_with_containers):
         """
         Test handling of failed node run results.
 
@@ -1504,10 +1547,10 @@ class TestWorkflowService:
             import uuid
             from datetime import datetime
 
-            from dify_graph.enums import NodeType, WorkflowNodeExecutionStatus
-            from dify_graph.graph_events import NodeRunFailedEvent
-            from dify_graph.node_events import NodeRunResult
-            from dify_graph.nodes.base.node import Node
+            from core.workflow.enums import NodeType, WorkflowNodeExecutionStatus
+            from core.workflow.graph_events import NodeRunFailedEvent
+            from core.workflow.node_events import NodeRunResult
+            from core.workflow.nodes.base.node import Node
 
             # Create mock node
             mock_node = MagicMock(spec=Node)
@@ -1549,13 +1592,13 @@ class TestWorkflowService:
         assert result is not None
         assert result.node_id == node_id
         # Import the enum for comparison
-        from dify_graph.enums import WorkflowNodeExecutionStatus
+        from core.workflow.enums import WorkflowNodeExecutionStatus
 
         assert result.status == WorkflowNodeExecutionStatus.FAILED
         assert result.error is not None
         assert "Test error message" in str(result.error)
 
-    def test_handle_node_run_result_continue_on_error(self, db_session_with_containers: Session):
+    def test_handle_node_run_result_continue_on_error(self, db_session_with_containers):
         """
         Test handling of node run results with continue_on_error strategy.
 
@@ -1573,10 +1616,10 @@ class TestWorkflowService:
             import uuid
             from datetime import datetime
 
-            from dify_graph.enums import ErrorStrategy, NodeType, WorkflowNodeExecutionStatus
-            from dify_graph.graph_events import NodeRunFailedEvent
-            from dify_graph.node_events import NodeRunResult
-            from dify_graph.nodes.base.node import Node
+            from core.workflow.enums import ErrorStrategy, NodeType, WorkflowNodeExecutionStatus
+            from core.workflow.graph_events import NodeRunFailedEvent
+            from core.workflow.node_events import NodeRunResult
+            from core.workflow.nodes.base.node import Node
 
             # Create mock node with continue_on_error
             mock_node = MagicMock(spec=Node)
@@ -1619,7 +1662,7 @@ class TestWorkflowService:
         assert result is not None
         assert result.node_id == node_id
         # Import the enum for comparison
-        from dify_graph.enums import WorkflowNodeExecutionStatus
+        from core.workflow.enums import WorkflowNodeExecutionStatus
 
         assert result.status == WorkflowNodeExecutionStatus.EXCEPTION  # Should be EXCEPTION, not FAILED
         assert result.outputs is not None

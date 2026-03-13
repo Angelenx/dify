@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import Uploader from '../uploader'
 
 const mockNotify = vi.fn()
-vi.mock('@/app/components/base/toast/context', () => ({
+vi.mock('@/app/components/base/toast', () => ({
   ToastContext: {
     Provider: ({ children }: { children: React.ReactNode }) => children,
     Consumer: ({ children }: { children: (value: { notify: typeof mockNotify }) => React.ReactNode }) => children({ notify: mockNotify }),

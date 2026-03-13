@@ -1,8 +1,3 @@
-/**
- * @deprecated Use `@/app/components/base/ui/alert-dialog` instead.
- * See issue #32767 for migration details.
- */
-
 import * as React from 'react'
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
@@ -10,7 +5,6 @@ import { useTranslation } from 'react-i18next'
 import Button from '../button'
 import Tooltip from '../tooltip'
 
-/** @deprecated Use `@/app/components/base/ui/alert-dialog` instead. */
 export type IConfirm = {
   className?: string
   isShow: boolean

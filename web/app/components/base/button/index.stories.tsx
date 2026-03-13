@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite'
 
+import { RocketLaunchIcon } from '@heroicons/react/20/solid'
 import { Button } from '.'
 
 const meta = {
@@ -11,15 +12,9 @@ const meta = {
   tags: ['autodocs'],
   argTypes: {
     loading: { control: 'boolean' },
-    destructive: { control: 'boolean' },
-    disabled: { control: 'boolean' },
     variant: {
       control: 'select',
       options: ['primary', 'warning', 'secondary', 'secondary-accent', 'ghost', 'ghost-accent', 'tertiary'],
-    },
-    size: {
-      control: 'select',
-      options: ['small', 'medium', 'large'],
     },
   },
   args: {
@@ -34,7 +29,11 @@ type Story = StoryObj<typeof meta>
 export const Default: Story = {
   args: {
     variant: 'primary',
+    loading: false,
     children: 'Primary Button',
+    styleCss: {},
+    spinnerClassName: '',
+    destructive: false,
   },
 }
 
@@ -96,46 +95,14 @@ export const Loading: Story = {
   },
 }
 
-export const Destructive: Story = {
-  args: {
-    variant: 'primary',
-    destructive: true,
-    children: 'Delete',
-  },
-}
-
 export const WithIcon: Story = {
   args: {
     variant: 'primary',
     children: (
       <>
-        <span className="i-heroicons-rocket-launch-20-solid mr-1.5 h-4 w-4" />
+        <RocketLaunchIcon className="mr-1.5 h-4 w-4 stroke-[1.8px]" />
         Launch
       </>
     ),
-  },
-}
-
-export const SmallSize: Story = {
-  args: {
-    variant: 'secondary',
-    size: 'small',
-    children: 'Small',
-  },
-}
-
-export const LargeSize: Story = {
-  args: {
-    variant: 'primary',
-    size: 'large',
-    children: 'Large Button',
-  },
-}
-
-export const AsLink: Story = {
-  args: {
-    variant: 'ghost-accent',
-    render: <a href="https://example.com" />,
-    children: 'Link Button',
   },
 }

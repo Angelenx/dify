@@ -1,7 +1,9 @@
-import { act, fireEvent, screen } from '@testing-library/react'
+import type { UrlUpdateEvent } from 'nuqs/adapters/testing'
+import type { ReactNode } from 'react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
+import { NuqsTestingAdapter } from 'nuqs/adapters/testing'
 import * as React from 'react'
 import { useStore as useTagStore } from '@/app/components/base/tag-management/store'
-import { renderWithNuqs } from '@/test/nuqs-testing'
 import { AppModeEnum } from '@/types/app'
 
 import List from '../list'
@@ -106,10 +108,6 @@ vi.mock('@/service/use-apps', () => ({
     error: mockServiceState.error,
     refetch: mockRefetch,
   }),
-  useDeleteAppMutation: () => ({
-    mutateAsync: vi.fn(),
-    isPending: false,
-  }),
 }))
 
 vi.mock('@/service/tag', () => ({
@@ -188,14 +186,21 @@ beforeAll(() => {
   } as unknown as typeof IntersectionObserver
 })
 
-// Render helper wrapping with shared nuqs testing helper.
+// Render helper wrapping with NuqsTestingAdapter
+const onUrlUpdate = vi.fn<(event: UrlUpdateEvent) => void>()
 const renderList = (searchParams = '') => {
-  return renderWithNuqs(<List />, { searchParams })
+  const wrapper = ({ children }: { children: ReactNode }) => (
+    <NuqsTestingAdapter searchParams={searchParams} onUrlUpdate={onUrlUpdate}>
+      {children}
+    </NuqsTestingAdapter>
+  )
+  return render(<List />, { wrapper })
 }
 
 describe('List', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    onUrlUpdate.mockClear()
     useTagStore.setState({
       tagList: [{ id: 'tag-1', name: 'Test Tag', type: 'app', binding_count: 0 }],
       showTagManagementModal: false,
@@ -272,7 +277,7 @@ describe('List', () => {
 
   describe('Tab Navigation', () => {
     it('should update URL when workflow tab is clicked', async () => {
-      const { onUrlUpdate } = renderList()
+      renderList()
 
       fireEvent.click(screen.getByText('app.types.workflow'))
 
@@ -282,7 +287,7 @@ describe('List', () => {
     })
 
     it('should update URL when all tab is clicked', async () => {
-      const { onUrlUpdate } = renderList('?category=workflow')
+      renderList('?category=workflow')
 
       fireEvent.click(screen.getByText('app.types.all'))
 
@@ -386,10 +391,18 @@ describe('List', () => {
 
   describe('Edge Cases', () => {
     it('should handle multiple renders without issues', () => {
-      const { rerender } = renderWithNuqs(<List />)
+      const { rerender } = render(
+        <NuqsTestingAdapter>
+          <List />
+        </NuqsTestingAdapter>,
+      )
       expect(screen.getByText('app.types.all')).toBeInTheDocument()
 
-      rerender(<List />)
+      rerender(
+        <NuqsTestingAdapter>
+          <List />
+        </NuqsTestingAdapter>,
+      )
       expect(screen.getByText('app.types.all')).toBeInTheDocument()
     })
 
@@ -435,7 +448,7 @@ describe('List', () => {
     })
 
     it('should update URL for each app type tab click', async () => {
-      const { onUrlUpdate } = renderList()
+      renderList()
 
       const appTypeTexts = [
         { mode: AppModeEnum.WORKFLOW, text: 'app.types.workflow' },

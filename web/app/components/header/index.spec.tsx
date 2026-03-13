@@ -52,7 +52,7 @@ vi.mock('@/app/components/header/plan-badge', () => ({
   ),
 }))
 
-vi.mock('@/context/workspace-context-provider', () => ({
+vi.mock('@/context/workspace-context', () => ({
   WorkspaceProvider: ({ children }: { children?: React.ReactNode }) => children,
 }))
 

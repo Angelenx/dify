@@ -1,11 +1,16 @@
 from enum import StrEnum
 
-from dify_graph.enums import NodeType
+from core.workflow.enums import NodeType
 
 
 class CreatorUserRole(StrEnum):
     ACCOUNT = "account"
     END_USER = "end_user"
+
+
+class UserFrom(StrEnum):
+    ACCOUNT = "account"
+    END_USER = "end-user"
 
 
 class WorkflowRunTriggeredFrom(StrEnum):

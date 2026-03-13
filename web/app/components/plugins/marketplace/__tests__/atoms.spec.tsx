@@ -1,20 +1,21 @@
+import type { UrlUpdateEvent } from 'nuqs/adapters/testing'
 import type { ReactNode } from 'react'
 import { act, renderHook } from '@testing-library/react'
 import { Provider as JotaiProvider } from 'jotai'
+import { NuqsTestingAdapter } from 'nuqs/adapters/testing'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { createNuqsTestWrapper } from '@/test/nuqs-testing'
 import { DEFAULT_SORT } from '../constants'
 
 const createWrapper = (searchParams = '') => {
-  const { wrapper: NuqsWrapper } = createNuqsTestWrapper({ searchParams })
+  const onUrlUpdate = vi.fn<(event: UrlUpdateEvent) => void>()
   const wrapper = ({ children }: { children: ReactNode }) => (
     <JotaiProvider>
-      <NuqsWrapper>
+      <NuqsTestingAdapter searchParams={searchParams} onUrlUpdate={onUrlUpdate}>
         {children}
-      </NuqsWrapper>
+      </NuqsTestingAdapter>
     </JotaiProvider>
   )
-  return { wrapper }
+  return { wrapper, onUrlUpdate }
 }
 
 describe('Marketplace sort atoms', () => {

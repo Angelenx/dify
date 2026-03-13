@@ -5,7 +5,7 @@ import { useTextGeneration } from '../hooks'
 const mockNotify = vi.fn()
 const mockSsePost = vi.fn<(url: string, fetchOptions: { body: Record<string, unknown> }, otherOptions: IOtherOptions) => void>()
 
-vi.mock('@/app/components/base/toast/context', () => ({
+vi.mock('@/app/components/base/toast', () => ({
   useToastContext: () => ({
     notify: mockNotify,
   }),

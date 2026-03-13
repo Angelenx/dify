@@ -30,6 +30,7 @@ from .enums import (
     AppTriggerStatus,
     AppTriggerType,
     CreatorUserRole,
+    UserFrom,
     WorkflowRunTriggeredFrom,
     WorkflowTriggerStatus,
 )
@@ -203,6 +204,7 @@ __all__ = [
     "TriggerOAuthTenantClient",
     "TriggerSubscription",
     "UploadFile",
+    "UserFrom",
     "Whitelist",
     "Workflow",
     "WorkflowAppLog",

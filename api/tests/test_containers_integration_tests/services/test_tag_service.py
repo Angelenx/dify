@@ -4,7 +4,6 @@ from unittest.mock import create_autospec, patch
 import pytest
 from faker import Faker
 from sqlalchemy import select
-from sqlalchemy.orm import Session
 from werkzeug.exceptions import NotFound
 
 from models import Account, Tenant, TenantAccountJoin, TenantAccountRole
@@ -30,7 +29,7 @@ class TestTagService:
                 "current_user": mock_current_user,
             }
 
-    def _create_test_account_and_tenant(self, db_session_with_containers: Session, mock_external_service_dependencies):
+    def _create_test_account_and_tenant(self, db_session_with_containers, mock_external_service_dependencies):
         """
         Helper method to create a test account and tenant for testing.
 
@@ -51,16 +50,18 @@ class TestTagService:
             status="active",
         )
 
-        db_session_with_containers.add(account)
-        db_session_with_containers.commit()
+        from extensions.ext_database import db
+
+        db.session.add(account)
+        db.session.commit()
 
         # Create tenant for the account
         tenant = Tenant(
             name=fake.company(),
             status="normal",
         )
-        db_session_with_containers.add(tenant)
-        db_session_with_containers.commit()
+        db.session.add(tenant)
+        db.session.commit()
 
         # Create tenant-account join
         join = TenantAccountJoin(
@@ -69,8 +70,8 @@ class TestTagService:
             role=TenantAccountRole.OWNER,
             current=True,
         )
-        db_session_with_containers.add(join)
-        db_session_with_containers.commit()
+        db.session.add(join)
+        db.session.commit()
 
         # Set current tenant for account
         account.current_tenant = tenant
@@ -81,7 +82,7 @@ class TestTagService:
 
         return account, tenant
 
-    def _create_test_dataset(self, db_session_with_containers: Session, mock_external_service_dependencies, tenant_id):
+    def _create_test_dataset(self, db_session_with_containers, mock_external_service_dependencies, tenant_id):
         """
         Helper method to create a test dataset for testing.
 
@@ -106,12 +107,14 @@ class TestTagService:
             created_by=mock_external_service_dependencies["current_user"].id,
         )
 
-        db_session_with_containers.add(dataset)
-        db_session_with_containers.commit()
+        from extensions.ext_database import db
+
+        db.session.add(dataset)
+        db.session.commit()
 
         return dataset
 
-    def _create_test_app(self, db_session_with_containers: Session, mock_external_service_dependencies, tenant_id):
+    def _create_test_app(self, db_session_with_containers, mock_external_service_dependencies, tenant_id):
         """
         Helper method to create a test app for testing.
 
@@ -138,13 +141,15 @@ class TestTagService:
             created_by=mock_external_service_dependencies["current_user"].id,
         )
 
-        db_session_with_containers.add(app)
-        db_session_with_containers.commit()
+        from extensions.ext_database import db
+
+        db.session.add(app)
+        db.session.commit()
 
         return app
 
     def _create_test_tags(
-        self, db_session_with_containers: Session, mock_external_service_dependencies, tenant_id, tag_type, count=3
+        self, db_session_with_containers, mock_external_service_dependencies, tenant_id, tag_type, count=3
     ):
         """
         Helper method to create test tags for testing.
@@ -171,14 +176,16 @@ class TestTagService:
             )
             tags.append(tag)
 
+        from extensions.ext_database import db
+
         for tag in tags:
-            db_session_with_containers.add(tag)
-        db_session_with_containers.commit()
+            db.session.add(tag)
+        db.session.commit()
 
         return tags
 
     def _create_test_tag_bindings(
-        self, db_session_with_containers: Session, mock_external_service_dependencies, tags, target_id, tenant_id
+        self, db_session_with_containers, mock_external_service_dependencies, tags, target_id, tenant_id
     ):
         """
         Helper method to create test tag bindings for testing.
@@ -204,13 +211,15 @@ class TestTagService:
             )
             tag_bindings.append(tag_binding)
 
+        from extensions.ext_database import db
+
         for tag_binding in tag_bindings:
-            db_session_with_containers.add(tag_binding)
-        db_session_with_containers.commit()
+            db.session.add(tag_binding)
+        db.session.commit()
 
         return tag_bindings
 
-    def test_get_tags_success(self, db_session_with_containers: Session, mock_external_service_dependencies):
+    def test_get_tags_success(self, db_session_with_containers, mock_external_service_dependencies):
         """
         Test successful retrieval of tags with binding count.
 
@@ -261,9 +270,7 @@ class TestTagService:
         # The ordering is handled by the database, we just verify the results are returned
         assert len(result) == 3
 
-    def test_get_tags_with_keyword_filter(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
-    ):
+    def test_get_tags_with_keyword_filter(self, db_session_with_containers, mock_external_service_dependencies):
         """
         Test tag retrieval with keyword filtering.
 
@@ -284,11 +291,12 @@ class TestTagService:
         )
 
         # Update tag names to make them searchable
+        from extensions.ext_database import db
 
         tags[0].name = "python_development"
         tags[1].name = "machine_learning"
         tags[2].name = "web_development"
-        db_session_with_containers.commit()
+        db.session.commit()
 
         # Act: Execute the method under test with keyword filter
         result = TagService.get_tags("app", tenant.id, keyword="development")
@@ -306,7 +314,7 @@ class TestTagService:
         assert len(result_no_match) == 0
 
     def test_get_tags_with_special_characters_in_keyword(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
+        self, db_session_with_containers, mock_external_service_dependencies
     ):
         r"""
         Test tag retrieval with special characters in keyword to verify SQL injection prevention.
@@ -322,6 +330,8 @@ class TestTagService:
             db_session_with_containers, mock_external_service_dependencies
         )
 
+        from extensions.ext_database import db
+
         # Create tags with special characters in names
         tag_with_percent = Tag(
             name="50% discount",
@@ -330,7 +340,7 @@ class TestTagService:
             created_by=account.id,
         )
         tag_with_percent.id = str(uuid.uuid4())
-        db_session_with_containers.add(tag_with_percent)
+        db.session.add(tag_with_percent)
 
         tag_with_underscore = Tag(
             name="test_data_tag",
@@ -339,7 +349,7 @@ class TestTagService:
             created_by=account.id,
         )
         tag_with_underscore.id = str(uuid.uuid4())
-        db_session_with_containers.add(tag_with_underscore)
+        db.session.add(tag_with_underscore)
 
         tag_with_backslash = Tag(
             name="path\\to\\tag",
@@ -348,7 +358,7 @@ class TestTagService:
             created_by=account.id,
         )
         tag_with_backslash.id = str(uuid.uuid4())
-        db_session_with_containers.add(tag_with_backslash)
+        db.session.add(tag_with_backslash)
 
         # Create tag that should NOT match
         tag_no_match = Tag(
@@ -358,9 +368,9 @@ class TestTagService:
             created_by=account.id,
         )
         tag_no_match.id = str(uuid.uuid4())
-        db_session_with_containers.add(tag_no_match)
+        db.session.add(tag_no_match)
 
-        db_session_with_containers.commit()
+        db.session.commit()
 
         # Act & Assert: Test 1 - Search with % character
         result = TagService.get_tags("app", tenant.id, keyword="50%")
@@ -382,7 +392,7 @@ class TestTagService:
         assert len(result) == 1
         assert all("50%" in item.name for item in result)
 
-    def test_get_tags_empty_result(self, db_session_with_containers: Session, mock_external_service_dependencies):
+    def test_get_tags_empty_result(self, db_session_with_containers, mock_external_service_dependencies):
         """
         Test tag retrieval when no tags exist.
 
@@ -404,9 +414,7 @@ class TestTagService:
         assert len(result) == 0
         assert isinstance(result, list)
 
-    def test_get_target_ids_by_tag_ids_success(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
-    ):
+    def test_get_target_ids_by_tag_ids_success(self, db_session_with_containers, mock_external_service_dependencies):
         """
         Test successful retrieval of target IDs by tag IDs.
 
@@ -461,7 +469,7 @@ class TestTagService:
         assert second_dataset_count == 1
 
     def test_get_target_ids_by_tag_ids_empty_tag_ids(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
+        self, db_session_with_containers, mock_external_service_dependencies
     ):
         """
         Test target ID retrieval with empty tag IDs list.
@@ -485,7 +493,7 @@ class TestTagService:
         assert isinstance(result, list)
 
     def test_get_target_ids_by_tag_ids_no_matching_tags(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
+        self, db_session_with_containers, mock_external_service_dependencies
     ):
         """
         Test target ID retrieval when no tags match the criteria.
@@ -513,7 +521,7 @@ class TestTagService:
         assert len(result) == 0
         assert isinstance(result, list)
 
-    def test_get_tag_by_tag_name_success(self, db_session_with_containers: Session, mock_external_service_dependencies):
+    def test_get_tag_by_tag_name_success(self, db_session_with_containers, mock_external_service_dependencies):
         """
         Test successful retrieval of tags by tag name.
 
@@ -534,10 +542,11 @@ class TestTagService:
         )
 
         # Update tag names to make them searchable
+        from extensions.ext_database import db
 
         tags[0].name = "python_tag"
         tags[1].name = "ml_tag"
-        db_session_with_containers.commit()
+        db.session.commit()
 
         # Act: Execute the method under test
         result = TagService.get_tag_by_tag_name("app", tenant.id, "python_tag")
@@ -549,9 +558,7 @@ class TestTagService:
         assert result[0].type == "app"
         assert result[0].tenant_id == tenant.id
 
-    def test_get_tag_by_tag_name_no_matches(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
-    ):
+    def test_get_tag_by_tag_name_no_matches(self, db_session_with_containers, mock_external_service_dependencies):
         """
         Test tag retrieval by name when no matches exist.
 
@@ -573,9 +580,7 @@ class TestTagService:
         assert len(result) == 0
         assert isinstance(result, list)
 
-    def test_get_tag_by_tag_name_empty_parameters(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
-    ):
+    def test_get_tag_by_tag_name_empty_parameters(self, db_session_with_containers, mock_external_service_dependencies):
         """
         Test tag retrieval by name with empty parameters.
 
@@ -600,9 +605,7 @@ class TestTagService:
         assert result_empty_name is not None
         assert len(result_empty_name) == 0
 
-    def test_get_tags_by_target_id_success(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
-    ):
+    def test_get_tags_by_target_id_success(self, db_session_with_containers, mock_external_service_dependencies):
         """
         Test successful retrieval of tags by target ID.
 
@@ -641,9 +644,7 @@ class TestTagService:
             assert tag.tenant_id == tenant.id
             assert tag.id in [t.id for t in tags]
 
-    def test_get_tags_by_target_id_no_bindings(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
-    ):
+    def test_get_tags_by_target_id_no_bindings(self, db_session_with_containers, mock_external_service_dependencies):
         """
         Test tag retrieval by target ID when no tags are bound.
 
@@ -668,7 +669,7 @@ class TestTagService:
         assert len(result) == 0
         assert isinstance(result, list)
 
-    def test_save_tags_success(self, db_session_with_containers: Session, mock_external_service_dependencies):
+    def test_save_tags_success(self, db_session_with_containers, mock_external_service_dependencies):
         """
         Test successful tag creation.
 
@@ -697,18 +698,17 @@ class TestTagService:
         assert result.id is not None
 
         # Verify database state
+        from extensions.ext_database import db
 
-        db_session_with_containers.refresh(result)
+        db.session.refresh(result)
         assert result.id is not None
 
         # Verify tag was actually saved to database
-        saved_tag = db_session_with_containers.query(Tag).where(Tag.id == result.id).first()
+        saved_tag = db.session.query(Tag).where(Tag.id == result.id).first()
         assert saved_tag is not None
         assert saved_tag.name == "test_tag_name"
 
-    def test_save_tags_duplicate_name_error(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
-    ):
+    def test_save_tags_duplicate_name_error(self, db_session_with_containers, mock_external_service_dependencies):
         """
         Test tag creation with duplicate name.
 
@@ -731,7 +731,7 @@ class TestTagService:
             TagService.save_tags(tag_args)
         assert "Tag name already exists" in str(exc_info.value)
 
-    def test_update_tags_success(self, db_session_with_containers: Session, mock_external_service_dependencies):
+    def test_update_tags_success(self, db_session_with_containers, mock_external_service_dependencies):
         """
         Test successful tag update.
 
@@ -763,16 +763,17 @@ class TestTagService:
         assert result.id == tag.id
 
         # Verify database state
+        from extensions.ext_database import db
 
-        db_session_with_containers.refresh(result)
+        db.session.refresh(result)
         assert result.name == "updated_name"
 
         # Verify tag was actually updated in database
-        updated_tag = db_session_with_containers.query(Tag).where(Tag.id == tag.id).first()
+        updated_tag = db.session.query(Tag).where(Tag.id == tag.id).first()
         assert updated_tag is not None
         assert updated_tag.name == "updated_name"
 
-    def test_update_tags_not_found_error(self, db_session_with_containers: Session, mock_external_service_dependencies):
+    def test_update_tags_not_found_error(self, db_session_with_containers, mock_external_service_dependencies):
         """
         Test tag update for non-existent tag.
 
@@ -798,9 +799,7 @@ class TestTagService:
             TagService.update_tags(update_args, non_existent_tag_id)
         assert "Tag not found" in str(exc_info.value)
 
-    def test_update_tags_duplicate_name_error(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
-    ):
+    def test_update_tags_duplicate_name_error(self, db_session_with_containers, mock_external_service_dependencies):
         """
         Test tag update with duplicate name.
 
@@ -829,9 +828,7 @@ class TestTagService:
             TagService.update_tags(update_args, tag2.id)
         assert "Tag name already exists" in str(exc_info.value)
 
-    def test_get_tag_binding_count_success(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
-    ):
+    def test_get_tag_binding_count_success(self, db_session_with_containers, mock_external_service_dependencies):
         """
         Test successful retrieval of tag binding count.
 
@@ -866,7 +863,7 @@ class TestTagService:
         assert result_tag_without_bindings == 0
 
     def test_get_tag_binding_count_non_existent_tag(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
+        self, db_session_with_containers, mock_external_service_dependencies
     ):
         """
         Test binding count retrieval for non-existent tag.
@@ -892,7 +889,7 @@ class TestTagService:
         # Assert: Verify the expected outcomes
         assert result == 0
 
-    def test_delete_tag_success(self, db_session_with_containers: Session, mock_external_service_dependencies):
+    def test_delete_tag_success(self, db_session_with_containers, mock_external_service_dependencies):
         """
         Test successful tag deletion.
 
@@ -919,11 +916,12 @@ class TestTagService:
         )
 
         # Verify tag and binding exist before deletion
+        from extensions.ext_database import db
 
-        tag_before = db_session_with_containers.query(Tag).where(Tag.id == tag.id).first()
+        tag_before = db.session.query(Tag).where(Tag.id == tag.id).first()
         assert tag_before is not None
 
-        binding_before = db_session_with_containers.query(TagBinding).where(TagBinding.tag_id == tag.id).first()
+        binding_before = db.session.query(TagBinding).where(TagBinding.tag_id == tag.id).first()
         assert binding_before is not None
 
         # Act: Execute the method under test
@@ -931,14 +929,14 @@ class TestTagService:
 
         # Assert: Verify the expected outcomes
         # Verify tag was deleted
-        tag_after = db_session_with_containers.query(Tag).where(Tag.id == tag.id).first()
+        tag_after = db.session.query(Tag).where(Tag.id == tag.id).first()
         assert tag_after is None
 
         # Verify tag binding was deleted
-        binding_after = db_session_with_containers.query(TagBinding).where(TagBinding.tag_id == tag.id).first()
+        binding_after = db.session.query(TagBinding).where(TagBinding.tag_id == tag.id).first()
         assert binding_after is None
 
-    def test_delete_tag_not_found_error(self, db_session_with_containers: Session, mock_external_service_dependencies):
+    def test_delete_tag_not_found_error(self, db_session_with_containers, mock_external_service_dependencies):
         """
         Test tag deletion for non-existent tag.
 
@@ -962,7 +960,7 @@ class TestTagService:
             TagService.delete_tag(non_existent_tag_id)
         assert "Tag not found" in str(exc_info.value)
 
-    def test_save_tag_binding_success(self, db_session_with_containers: Session, mock_external_service_dependencies):
+    def test_save_tag_binding_success(self, db_session_with_containers, mock_external_service_dependencies):
         """
         Test successful tag binding creation.
 
@@ -990,11 +988,12 @@ class TestTagService:
         TagService.save_tag_binding(binding_args)
 
         # Assert: Verify the expected outcomes
+        from extensions.ext_database import db
 
         # Verify tag bindings were created
         for tag in tags:
             binding = (
-                db_session_with_containers.query(TagBinding)
+                db.session.query(TagBinding)
                 .where(TagBinding.tag_id == tag.id, TagBinding.target_id == dataset.id)
                 .first()
             )
@@ -1002,9 +1001,7 @@ class TestTagService:
             assert binding.tenant_id == tenant.id
             assert binding.created_by == account.id
 
-    def test_save_tag_binding_duplicate_handling(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
-    ):
+    def test_save_tag_binding_duplicate_handling(self, db_session_with_containers, mock_external_service_dependencies):
         """
         Test tag binding creation with duplicate bindings.
 
@@ -1035,16 +1032,15 @@ class TestTagService:
         TagService.save_tag_binding(binding_args)
 
         # Assert: Verify the expected outcomes
+        from extensions.ext_database import db
 
         # Verify only one binding exists
-        bindings = db_session_with_containers.scalars(
+        bindings = db.session.scalars(
             select(TagBinding).where(TagBinding.tag_id == tag.id, TagBinding.target_id == app.id)
         ).all()
         assert len(bindings) == 1
 
-    def test_save_tag_binding_invalid_target_type(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
-    ):
+    def test_save_tag_binding_invalid_target_type(self, db_session_with_containers, mock_external_service_dependencies):
         """
         Test tag binding creation with invalid target type.
 
@@ -1075,7 +1071,7 @@ class TestTagService:
             TagService.save_tag_binding(binding_args)
         assert "Invalid binding type" in str(exc_info.value)
 
-    def test_delete_tag_binding_success(self, db_session_with_containers: Session, mock_external_service_dependencies):
+    def test_delete_tag_binding_success(self, db_session_with_containers, mock_external_service_dependencies):
         """
         Test successful tag binding deletion.
 
@@ -1102,11 +1098,10 @@ class TestTagService:
         )
 
         # Verify binding exists before deletion
+        from extensions.ext_database import db
 
         binding_before = (
-            db_session_with_containers.query(TagBinding)
-            .where(TagBinding.tag_id == tag.id, TagBinding.target_id == dataset.id)
-            .first()
+            db.session.query(TagBinding).where(TagBinding.tag_id == tag.id, TagBinding.target_id == dataset.id).first()
         )
         assert binding_before is not None
 
@@ -1117,14 +1112,12 @@ class TestTagService:
         # Assert: Verify the expected outcomes
         # Verify tag binding was deleted
         binding_after = (
-            db_session_with_containers.query(TagBinding)
-            .where(TagBinding.tag_id == tag.id, TagBinding.target_id == dataset.id)
-            .first()
+            db.session.query(TagBinding).where(TagBinding.tag_id == tag.id, TagBinding.target_id == dataset.id).first()
         )
         assert binding_after is None
 
     def test_delete_tag_binding_non_existent_binding(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
+        self, db_session_with_containers, mock_external_service_dependencies
     ):
         """
         Test tag binding deletion for non-existent binding.
@@ -1152,14 +1145,15 @@ class TestTagService:
 
         # Assert: Verify the expected outcomes
         # No error should be raised, and database state should remain unchanged
+        from extensions.ext_database import db
 
-        bindings = db_session_with_containers.scalars(
+        bindings = db.session.scalars(
             select(TagBinding).where(TagBinding.tag_id == tag.id, TagBinding.target_id == app.id)
         ).all()
         assert len(bindings) == 0
 
     def test_check_target_exists_knowledge_success(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
+        self, db_session_with_containers, mock_external_service_dependencies
     ):
         """
         Test successful target existence check for knowledge type.
@@ -1185,7 +1179,7 @@ class TestTagService:
         # No exception should be raised for existing dataset
 
     def test_check_target_exists_knowledge_not_found(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
+        self, db_session_with_containers, mock_external_service_dependencies
     ):
         """
         Test target existence check for non-existent knowledge dataset.
@@ -1210,9 +1204,7 @@ class TestTagService:
             TagService.check_target_exists("knowledge", non_existent_dataset_id)
         assert "Dataset not found" in str(exc_info.value)
 
-    def test_check_target_exists_app_success(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
-    ):
+    def test_check_target_exists_app_success(self, db_session_with_containers, mock_external_service_dependencies):
         """
         Test successful target existence check for app type.
 
@@ -1236,9 +1228,7 @@ class TestTagService:
         # Assert: Verify the expected outcomes
         # No exception should be raised for existing app
 
-    def test_check_target_exists_app_not_found(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
-    ):
+    def test_check_target_exists_app_not_found(self, db_session_with_containers, mock_external_service_dependencies):
         """
         Test target existence check for non-existent app.
 
@@ -1262,9 +1252,7 @@ class TestTagService:
             TagService.check_target_exists("app", non_existent_app_id)
         assert "App not found" in str(exc_info.value)
 
-    def test_check_target_exists_invalid_type(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
-    ):
+    def test_check_target_exists_invalid_type(self, db_session_with_containers, mock_external_service_dependencies):
         """
         Test target existence check for invalid type.
 

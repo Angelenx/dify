@@ -10,9 +10,9 @@ from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
-from sqlalchemy.orm import Session
 from werkzeug.exceptions import NotFound
 
+from extensions.ext_database import db
 from models import Account, Tenant, TenantAccountJoin, TenantAccountRole
 from models.dataset import AppDatasetJoin, Dataset, DatasetPermissionEnum
 from models.model import App
@@ -27,7 +27,6 @@ class DatasetUpdateDeleteTestDataFactory:
 
     @staticmethod
     def create_account_with_tenant(
-        db_session_with_containers: Session,
         role: TenantAccountRole = TenantAccountRole.NORMAL,
         tenant: Tenant | None = None,
     ) -> tuple[Account, Tenant]:
@@ -38,13 +37,13 @@ class DatasetUpdateDeleteTestDataFactory:
             interface_language="en-US",
             status="active",
         )
-        db_session_with_containers.add(account)
-        db_session_with_containers.commit()
+        db.session.add(account)
+        db.session.commit()
 
         if tenant is None:
             tenant = Tenant(name=f"tenant-{uuid4()}", status="normal")
-            db_session_with_containers.add(tenant)
-            db_session_with_containers.commit()
+            db.session.add(tenant)
+            db.session.commit()
 
         join = TenantAccountJoin(
             tenant_id=tenant.id,
@@ -52,15 +51,14 @@ class DatasetUpdateDeleteTestDataFactory:
             role=role,
             current=True,
         )
-        db_session_with_containers.add(join)
-        db_session_with_containers.commit()
+        db.session.add(join)
+        db.session.commit()
 
         account.current_tenant = tenant
         return account, tenant
 
     @staticmethod
     def create_dataset(
-        db_session_with_containers: Session,
         tenant_id: str,
         created_by: str,
         name: str = "Test Dataset",
@@ -80,12 +78,12 @@ class DatasetUpdateDeleteTestDataFactory:
             retrieval_model={"top_k": 2},
             enable_api=enable_api,
         )
-        db_session_with_containers.add(dataset)
-        db_session_with_containers.commit()
+        db.session.add(dataset)
+        db.session.commit()
         return dataset
 
     @staticmethod
-    def create_app(db_session_with_containers: Session, tenant_id: str, created_by: str, name: str = "Test App") -> App:
+    def create_app(tenant_id: str, created_by: str, name: str = "Test App") -> App:
         """Create a real app for AppDatasetJoin."""
         app = App(
             tenant_id=tenant_id,
@@ -98,16 +96,16 @@ class DatasetUpdateDeleteTestDataFactory:
             enable_api=True,
             created_by=created_by,
         )
-        db_session_with_containers.add(app)
-        db_session_with_containers.commit()
+        db.session.add(app)
+        db.session.commit()
         return app
 
     @staticmethod
-    def create_app_dataset_join(db_session_with_containers: Session, app_id: str, dataset_id: str) -> AppDatasetJoin:
+    def create_app_dataset_join(app_id: str, dataset_id: str) -> AppDatasetJoin:
         """Create a real AppDatasetJoin record."""
         join = AppDatasetJoin(app_id=app_id, dataset_id=dataset_id)
-        db_session_with_containers.add(join)
-        db_session_with_containers.commit()
+        db.session.add(join)
+        db.session.commit()
         return join
 
 
@@ -116,7 +114,7 @@ class TestDatasetServiceDeleteDataset:
     Comprehensive integration tests for DatasetService.delete_dataset method.
     """
 
-    def test_delete_dataset_success(self, db_session_with_containers: Session):
+    def test_delete_dataset_success(self, db_session_with_containers):
         """
         Test successful deletion of a dataset.
 
@@ -132,10 +130,8 @@ class TestDatasetServiceDeleteDataset:
         - Method returns True
         """
         # Arrange
-        owner, tenant = DatasetUpdateDeleteTestDataFactory.create_account_with_tenant(
-            db_session_with_containers, role=TenantAccountRole.OWNER
-        )
-        dataset = DatasetUpdateDeleteTestDataFactory.create_dataset(db_session_with_containers, tenant.id, owner.id)
+        owner, tenant = DatasetUpdateDeleteTestDataFactory.create_account_with_tenant(role=TenantAccountRole.OWNER)
+        dataset = DatasetUpdateDeleteTestDataFactory.create_dataset(tenant.id, owner.id)
 
         # Act
         with patch("services.dataset_service.dataset_was_deleted") as mock_dataset_was_deleted:
@@ -143,10 +139,10 @@ class TestDatasetServiceDeleteDataset:
 
         # Assert
         assert result is True
-        assert db_session_with_containers.get(Dataset, dataset.id) is None
+        assert db.session.get(Dataset, dataset.id) is None
         mock_dataset_was_deleted.send.assert_called_once_with(dataset)
 
-    def test_delete_dataset_not_found(self, db_session_with_containers: Session):
+    def test_delete_dataset_not_found(self, db_session_with_containers):
         """
         Test handling when dataset is not found.
 
@@ -160,9 +156,7 @@ class TestDatasetServiceDeleteDataset:
         - No database operations are performed
         """
         # Arrange
-        owner, _ = DatasetUpdateDeleteTestDataFactory.create_account_with_tenant(
-            db_session_with_containers, role=TenantAccountRole.OWNER
-        )
+        owner, _ = DatasetUpdateDeleteTestDataFactory.create_account_with_tenant(role=TenantAccountRole.OWNER)
         dataset_id = str(uuid4())
 
         # Act
@@ -171,7 +165,7 @@ class TestDatasetServiceDeleteDataset:
         # Assert
         assert result is False
 
-    def test_delete_dataset_permission_denied_error(self, db_session_with_containers: Session):
+    def test_delete_dataset_permission_denied_error(self, db_session_with_containers):
         """
         Test error handling when user lacks permission.
 
@@ -184,22 +178,19 @@ class TestDatasetServiceDeleteDataset:
         - No database operations are performed
         """
         # Arrange
-        owner, tenant = DatasetUpdateDeleteTestDataFactory.create_account_with_tenant(
-            db_session_with_containers, role=TenantAccountRole.OWNER
-        )
+        owner, tenant = DatasetUpdateDeleteTestDataFactory.create_account_with_tenant(role=TenantAccountRole.OWNER)
         normal_user, _ = DatasetUpdateDeleteTestDataFactory.create_account_with_tenant(
-            db_session_with_containers,
             role=TenantAccountRole.NORMAL,
             tenant=tenant,
         )
-        dataset = DatasetUpdateDeleteTestDataFactory.create_dataset(db_session_with_containers, tenant.id, owner.id)
+        dataset = DatasetUpdateDeleteTestDataFactory.create_dataset(tenant.id, owner.id)
 
         # Act & Assert
         with pytest.raises(NoPermissionError):
             DatasetService.delete_dataset(dataset.id, normal_user)
 
         # Verify no deletion was attempted
-        assert db_session_with_containers.get(Dataset, dataset.id) is not None
+        assert db.session.get(Dataset, dataset.id) is not None
 
 
 class TestDatasetServiceDatasetUseCheck:
@@ -207,7 +198,7 @@ class TestDatasetServiceDatasetUseCheck:
     Comprehensive integration tests for DatasetService.dataset_use_check method.
     """
 
-    def test_dataset_use_check_in_use(self, db_session_with_containers: Session):
+    def test_dataset_use_check_in_use(self, db_session_with_containers):
         """
         Test detection when dataset is in use.
 
@@ -220,12 +211,10 @@ class TestDatasetServiceDatasetUseCheck:
         - Database query is executed
         """
         # Arrange
-        owner, tenant = DatasetUpdateDeleteTestDataFactory.create_account_with_tenant(
-            db_session_with_containers, role=TenantAccountRole.OWNER
-        )
-        dataset = DatasetUpdateDeleteTestDataFactory.create_dataset(db_session_with_containers, tenant.id, owner.id)
-        app = DatasetUpdateDeleteTestDataFactory.create_app(db_session_with_containers, tenant.id, owner.id)
-        DatasetUpdateDeleteTestDataFactory.create_app_dataset_join(db_session_with_containers, app.id, dataset.id)
+        owner, tenant = DatasetUpdateDeleteTestDataFactory.create_account_with_tenant(role=TenantAccountRole.OWNER)
+        dataset = DatasetUpdateDeleteTestDataFactory.create_dataset(tenant.id, owner.id)
+        app = DatasetUpdateDeleteTestDataFactory.create_app(tenant.id, owner.id)
+        DatasetUpdateDeleteTestDataFactory.create_app_dataset_join(app.id, dataset.id)
 
         # Act
         result = DatasetService.dataset_use_check(dataset.id)
@@ -233,7 +222,7 @@ class TestDatasetServiceDatasetUseCheck:
         # Assert
         assert result is True
 
-    def test_dataset_use_check_not_in_use(self, db_session_with_containers: Session):
+    def test_dataset_use_check_not_in_use(self, db_session_with_containers):
         """
         Test detection when dataset is not in use.
 
@@ -246,10 +235,8 @@ class TestDatasetServiceDatasetUseCheck:
         - Database query is executed
         """
         # Arrange
-        owner, tenant = DatasetUpdateDeleteTestDataFactory.create_account_with_tenant(
-            db_session_with_containers, role=TenantAccountRole.OWNER
-        )
-        dataset = DatasetUpdateDeleteTestDataFactory.create_dataset(db_session_with_containers, tenant.id, owner.id)
+        owner, tenant = DatasetUpdateDeleteTestDataFactory.create_account_with_tenant(role=TenantAccountRole.OWNER)
+        dataset = DatasetUpdateDeleteTestDataFactory.create_dataset(tenant.id, owner.id)
 
         # Act
         result = DatasetService.dataset_use_check(dataset.id)
@@ -263,7 +250,7 @@ class TestDatasetServiceUpdateDatasetApiStatus:
     Comprehensive integration tests for DatasetService.update_dataset_api_status method.
     """
 
-    def test_update_dataset_api_status_enable_success(self, db_session_with_containers: Session):
+    def test_update_dataset_api_status_enable_success(self, db_session_with_containers):
         """
         Test successful enabling of dataset API access.
 
@@ -277,12 +264,8 @@ class TestDatasetServiceUpdateDatasetApiStatus:
         - Transaction is committed
         """
         # Arrange
-        owner, tenant = DatasetUpdateDeleteTestDataFactory.create_account_with_tenant(
-            db_session_with_containers, role=TenantAccountRole.OWNER
-        )
-        dataset = DatasetUpdateDeleteTestDataFactory.create_dataset(
-            db_session_with_containers, tenant.id, owner.id, enable_api=False
-        )
+        owner, tenant = DatasetUpdateDeleteTestDataFactory.create_account_with_tenant(role=TenantAccountRole.OWNER)
+        dataset = DatasetUpdateDeleteTestDataFactory.create_dataset(tenant.id, owner.id, enable_api=False)
         current_time = datetime.datetime(2023, 1, 1, 12, 0, 0)
 
         # Act
@@ -293,12 +276,12 @@ class TestDatasetServiceUpdateDatasetApiStatus:
             DatasetService.update_dataset_api_status(dataset.id, True)
 
         # Assert
-        db_session_with_containers.refresh(dataset)
+        db.session.refresh(dataset)
         assert dataset.enable_api is True
         assert dataset.updated_by == owner.id
         assert dataset.updated_at == current_time
 
-    def test_update_dataset_api_status_disable_success(self, db_session_with_containers: Session):
+    def test_update_dataset_api_status_disable_success(self, db_session_with_containers):
         """
         Test successful disabling of dataset API access.
 
@@ -312,12 +295,8 @@ class TestDatasetServiceUpdateDatasetApiStatus:
         - Transaction is committed
         """
         # Arrange
-        owner, tenant = DatasetUpdateDeleteTestDataFactory.create_account_with_tenant(
-            db_session_with_containers, role=TenantAccountRole.OWNER
-        )
-        dataset = DatasetUpdateDeleteTestDataFactory.create_dataset(
-            db_session_with_containers, tenant.id, owner.id, enable_api=True
-        )
+        owner, tenant = DatasetUpdateDeleteTestDataFactory.create_account_with_tenant(role=TenantAccountRole.OWNER)
+        dataset = DatasetUpdateDeleteTestDataFactory.create_dataset(tenant.id, owner.id, enable_api=True)
         current_time = datetime.datetime(2023, 1, 1, 12, 0, 0)
 
         # Act
@@ -328,11 +307,11 @@ class TestDatasetServiceUpdateDatasetApiStatus:
             DatasetService.update_dataset_api_status(dataset.id, False)
 
         # Assert
-        db_session_with_containers.refresh(dataset)
+        db.session.refresh(dataset)
         assert dataset.enable_api is False
         assert dataset.updated_by == owner.id
 
-    def test_update_dataset_api_status_not_found_error(self, db_session_with_containers: Session):
+    def test_update_dataset_api_status_not_found_error(self, db_session_with_containers):
         """
         Test error handling when dataset is not found.
 
@@ -351,7 +330,7 @@ class TestDatasetServiceUpdateDatasetApiStatus:
         with pytest.raises(NotFound, match="Dataset not found"):
             DatasetService.update_dataset_api_status(dataset_id, True)
 
-    def test_update_dataset_api_status_missing_current_user_error(self, db_session_with_containers: Session):
+    def test_update_dataset_api_status_missing_current_user_error(self, db_session_with_containers):
         """
         Test error handling when current_user is missing.
 
@@ -364,12 +343,8 @@ class TestDatasetServiceUpdateDatasetApiStatus:
         - No updates are committed
         """
         # Arrange
-        owner, tenant = DatasetUpdateDeleteTestDataFactory.create_account_with_tenant(
-            db_session_with_containers, role=TenantAccountRole.OWNER
-        )
-        dataset = DatasetUpdateDeleteTestDataFactory.create_dataset(
-            db_session_with_containers, tenant.id, owner.id, enable_api=False
-        )
+        owner, tenant = DatasetUpdateDeleteTestDataFactory.create_account_with_tenant(role=TenantAccountRole.OWNER)
+        dataset = DatasetUpdateDeleteTestDataFactory.create_dataset(tenant.id, owner.id, enable_api=False)
 
         # Act & Assert
         with (
@@ -379,6 +354,6 @@ class TestDatasetServiceUpdateDatasetApiStatus:
             DatasetService.update_dataset_api_status(dataset.id, True)
 
         # Verify no commit was attempted
-        db_session_with_containers.rollback()
-        db_session_with_containers.refresh(dataset)
+        db.session.rollback()
+        db.session.refresh(dataset)
         assert dataset.enable_api is False

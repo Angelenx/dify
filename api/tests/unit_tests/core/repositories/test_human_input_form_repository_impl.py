@@ -5,6 +5,7 @@ from __future__ import annotations
 import dataclasses
 from datetime import datetime
 from types import SimpleNamespace
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -14,7 +15,7 @@ from core.repositories.human_input_repository import (
     HumanInputFormSubmissionRepository,
     _WorkspaceMemberInfo,
 )
-from dify_graph.nodes.human_input.entities import (
+from core.workflow.nodes.human_input.entities import (
     EmailDeliveryConfig,
     EmailDeliveryMethod,
     EmailRecipients,
@@ -23,7 +24,7 @@ from dify_graph.nodes.human_input.entities import (
     MemberRecipient,
     UserAction,
 )
-from dify_graph.nodes.human_input.enums import HumanInputFormKind, HumanInputFormStatus
+from core.workflow.nodes.human_input.enums import HumanInputFormKind, HumanInputFormStatus
 from libs.datetime_utils import naive_utc_now
 from models.human_input import (
     EmailExternalRecipientPayload,
@@ -34,7 +35,7 @@ from models.human_input import (
 
 
 def _build_repository() -> HumanInputFormRepositoryImpl:
-    return HumanInputFormRepositoryImpl(tenant_id="tenant-id")
+    return HumanInputFormRepositoryImpl(session_factory=MagicMock(), tenant_id="tenant-id")
 
 
 def _patch_recipient_factory(monkeypatch: pytest.MonkeyPatch) -> list[SimpleNamespace]:
@@ -388,21 +389,8 @@ def _session_factory(session: _FakeSession):
     return _factory
 
 
-def _patch_repo_session_factory(monkeypatch: pytest.MonkeyPatch, session: _FakeSession) -> None:
-    """Patch repository's global session factory to return our fake session.
-
-    The repositories under test now use a global session factory; patch its
-    create_session method so unit tests don't hit a real database.
-    """
-    monkeypatch.setattr(
-        "core.repositories.human_input_repository.session_factory.create_session",
-        _session_factory(session),
-        raising=True,
-    )
-
-
 class TestHumanInputFormRepositoryImplPublicMethods:
-    def test_get_form_returns_entity_and_recipients(self, monkeypatch: pytest.MonkeyPatch):
+    def test_get_form_returns_entity_and_recipients(self):
         form = _DummyForm(
             id="form-1",
             workflow_run_id="run-1",
@@ -420,8 +408,7 @@ class TestHumanInputFormRepositoryImplPublicMethods:
             access_token="token-123",
         )
         session = _FakeSession(scalars_results=[form, [recipient]])
-        _patch_repo_session_factory(monkeypatch, session)
-        repo = HumanInputFormRepositoryImpl(tenant_id="tenant-id")
+        repo = HumanInputFormRepositoryImpl(_session_factory(session), tenant_id="tenant-id")
 
         entity = repo.get_form(form.workflow_run_id, form.node_id)
 
@@ -431,14 +418,13 @@ class TestHumanInputFormRepositoryImplPublicMethods:
         assert len(entity.recipients) == 1
         assert entity.recipients[0].token == "token-123"
 
-    def test_get_form_returns_none_when_missing(self, monkeypatch: pytest.MonkeyPatch):
+    def test_get_form_returns_none_when_missing(self):
         session = _FakeSession(scalars_results=[None])
-        _patch_repo_session_factory(monkeypatch, session)
-        repo = HumanInputFormRepositoryImpl(tenant_id="tenant-id")
+        repo = HumanInputFormRepositoryImpl(_session_factory(session), tenant_id="tenant-id")
 
         assert repo.get_form("run-1", "node-1") is None
 
-    def test_get_form_returns_unsubmitted_state(self, monkeypatch: pytest.MonkeyPatch):
+    def test_get_form_returns_unsubmitted_state(self):
         form = _DummyForm(
             id="form-1",
             workflow_run_id="run-1",
@@ -450,8 +436,7 @@ class TestHumanInputFormRepositoryImplPublicMethods:
             expiration_time=naive_utc_now(),
         )
         session = _FakeSession(scalars_results=[form, []])
-        _patch_repo_session_factory(monkeypatch, session)
-        repo = HumanInputFormRepositoryImpl(tenant_id="tenant-id")
+        repo = HumanInputFormRepositoryImpl(_session_factory(session), tenant_id="tenant-id")
 
         entity = repo.get_form(form.workflow_run_id, form.node_id)
 
@@ -460,7 +445,7 @@ class TestHumanInputFormRepositoryImplPublicMethods:
         assert entity.selected_action_id is None
         assert entity.submitted_data is None
 
-    def test_get_form_returns_submission_when_completed(self, monkeypatch: pytest.MonkeyPatch):
+    def test_get_form_returns_submission_when_completed(self):
         form = _DummyForm(
             id="form-1",
             workflow_run_id="run-1",
@@ -475,8 +460,7 @@ class TestHumanInputFormRepositoryImplPublicMethods:
             submitted_at=naive_utc_now(),
         )
         session = _FakeSession(scalars_results=[form, []])
-        _patch_repo_session_factory(monkeypatch, session)
-        repo = HumanInputFormRepositoryImpl(tenant_id="tenant-id")
+        repo = HumanInputFormRepositoryImpl(_session_factory(session), tenant_id="tenant-id")
 
         entity = repo.get_form(form.workflow_run_id, form.node_id)
 
@@ -487,7 +471,7 @@ class TestHumanInputFormRepositoryImplPublicMethods:
 
 
 class TestHumanInputFormSubmissionRepository:
-    def test_get_by_token_returns_record(self, monkeypatch: pytest.MonkeyPatch):
+    def test_get_by_token_returns_record(self):
         form = _DummyForm(
             id="form-1",
             workflow_run_id="run-1",
@@ -506,8 +490,7 @@ class TestHumanInputFormSubmissionRepository:
             form=form,
         )
         session = _FakeSession(scalars_result=recipient)
-        _patch_repo_session_factory(monkeypatch, session)
-        repo = HumanInputFormSubmissionRepository()
+        repo = HumanInputFormSubmissionRepository(_session_factory(session))
 
         record = repo.get_by_token("token-123")
 
@@ -516,7 +499,7 @@ class TestHumanInputFormSubmissionRepository:
         assert record.recipient_type == RecipientType.STANDALONE_WEB_APP
         assert record.submitted is False
 
-    def test_get_by_form_id_and_recipient_type_uses_recipient(self, monkeypatch: pytest.MonkeyPatch):
+    def test_get_by_form_id_and_recipient_type_uses_recipient(self):
         form = _DummyForm(
             id="form-1",
             workflow_run_id="run-1",
@@ -535,8 +518,7 @@ class TestHumanInputFormSubmissionRepository:
             form=form,
         )
         session = _FakeSession(scalars_result=recipient)
-        _patch_repo_session_factory(monkeypatch, session)
-        repo = HumanInputFormSubmissionRepository()
+        repo = HumanInputFormSubmissionRepository(_session_factory(session))
 
         record = repo.get_by_form_id_and_recipient_type(
             form_id=form.id,
@@ -571,8 +553,7 @@ class TestHumanInputFormSubmissionRepository:
             forms={form.id: form},
             recipients={recipient.id: recipient},
         )
-        _patch_repo_session_factory(monkeypatch, session)
-        repo = HumanInputFormSubmissionRepository()
+        repo = HumanInputFormSubmissionRepository(_session_factory(session))
 
         record: HumanInputFormRecord = repo.mark_submitted(
             form_id=form.id,

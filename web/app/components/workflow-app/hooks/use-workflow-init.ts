@@ -100,7 +100,6 @@ export const useWorkflowInit = () => {
               },
             }).then((res) => {
               workflowStore.getState().setDraftUpdatedAt(res.updated_at)
-              setSyncWorkflowDraftHash(res.hash)
               handleGetInitialWorkflowData()
             })
           }

@@ -16,7 +16,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from faker import Faker
-from sqlalchemy.orm import Session
 
 from models import Account, Tenant, TenantAccountJoin, TenantAccountRole
 from models.dataset import (
@@ -38,7 +37,7 @@ class TestCleanDatasetTask:
     """Integration tests for clean_dataset_task using testcontainers."""
 
     @pytest.fixture(autouse=True)
-    def cleanup_database(self, db_session_with_containers: Session):
+    def cleanup_database(self, db_session_with_containers):
         """Clean up database before each test to ensure isolation."""
         from extensions.ext_redis import redis_client
 
@@ -83,7 +82,7 @@ class TestCleanDatasetTask:
                 "index_processor": mock_index_processor,
             }
 
-    def _create_test_account_and_tenant(self, db_session_with_containers: Session):
+    def _create_test_account_and_tenant(self, db_session_with_containers):
         """
         Helper method to create a test account and tenant for testing.
 
@@ -128,7 +127,7 @@ class TestCleanDatasetTask:
 
         return account, tenant
 
-    def _create_test_dataset(self, db_session_with_containers: Session, account, tenant):
+    def _create_test_dataset(self, db_session_with_containers, account, tenant):
         """
         Helper method to create a test dataset for testing.
 
@@ -158,7 +157,7 @@ class TestCleanDatasetTask:
 
         return dataset
 
-    def _create_test_document(self, db_session_with_containers: Session, account, tenant, dataset):
+    def _create_test_document(self, db_session_with_containers, account, tenant, dataset):
         """
         Helper method to create a test document for testing.
 
@@ -195,7 +194,7 @@ class TestCleanDatasetTask:
 
         return document
 
-    def _create_test_segment(self, db_session_with_containers: Session, account, tenant, dataset, document):
+    def _create_test_segment(self, db_session_with_containers, account, tenant, dataset, document):
         """
         Helper method to create a test document segment for testing.
 
@@ -231,7 +230,7 @@ class TestCleanDatasetTask:
 
         return segment
 
-    def _create_test_upload_file(self, db_session_with_containers: Session, account, tenant):
+    def _create_test_upload_file(self, db_session_with_containers, account, tenant):
         """
         Helper method to create a test upload file for testing.
 
@@ -265,7 +264,7 @@ class TestCleanDatasetTask:
         return upload_file
 
     def test_clean_dataset_task_success_basic_cleanup(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
+        self, db_session_with_containers, mock_external_service_dependencies
     ):
         """
         Test successful basic dataset cleanup with minimal data.
@@ -326,7 +325,7 @@ class TestCleanDatasetTask:
         mock_storage.delete.assert_not_called()
 
     def test_clean_dataset_task_success_with_documents_and_segments(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
+        self, db_session_with_containers, mock_external_service_dependencies
     ):
         """
         Test successful dataset cleanup with documents and segments.
@@ -434,7 +433,7 @@ class TestCleanDatasetTask:
         assert mock_storage.delete.call_count == 3
 
     def test_clean_dataset_task_success_with_invalid_doc_form(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
+        self, db_session_with_containers, mock_external_service_dependencies
     ):
         """
         Test successful dataset cleanup with invalid doc_form handling.
@@ -494,7 +493,7 @@ class TestCleanDatasetTask:
         assert mock_factory.call_count == 4
 
     def test_clean_dataset_task_error_handling_and_rollback(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
+        self, db_session_with_containers, mock_external_service_dependencies
     ):
         """
         Test error handling and rollback mechanism when database operations fail.
@@ -543,7 +542,7 @@ class TestCleanDatasetTask:
         # This demonstrates the resilience of the cleanup process
 
     def test_clean_dataset_task_with_image_file_references(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
+        self, db_session_with_containers, mock_external_service_dependencies
     ):
         """
         Test dataset cleanup with image file references in document segments.
@@ -635,7 +634,7 @@ class TestCleanDatasetTask:
         mock_get_image_ids.assert_called_once()
 
     def test_clean_dataset_task_performance_with_large_dataset(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
+        self, db_session_with_containers, mock_external_service_dependencies
     ):
         """
         Test dataset cleanup performance with large amounts of data.
@@ -705,9 +704,11 @@ class TestCleanDatasetTask:
             binding.created_at = datetime.now()
             bindings.append(binding)
 
-        db_session_with_containers.add_all(metadata_items)
-        db_session_with_containers.add_all(bindings)
-        db_session_with_containers.commit()
+        from extensions.ext_database import db
+
+        db.session.add_all(metadata_items)
+        db.session.add_all(bindings)
+        db.session.commit()
 
         # Measure cleanup performance
         import time
@@ -771,7 +772,7 @@ class TestCleanDatasetTask:
         print(f"Average time per document: {cleanup_duration / len(documents):.3f} seconds")
 
     def test_clean_dataset_task_storage_exception_handling(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
+        self, db_session_with_containers, mock_external_service_dependencies
     ):
         """
         Test dataset cleanup when storage operations fail.
@@ -837,7 +838,7 @@ class TestCleanDatasetTask:
         # consistency in the database
 
     def test_clean_dataset_task_edge_cases_and_boundary_conditions(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
+        self, db_session_with_containers, mock_external_service_dependencies
     ):
         """
         Test dataset cleanup with edge cases and boundary conditions.

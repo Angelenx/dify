@@ -5,7 +5,6 @@ from unittest.mock import create_autospec, patch
 import pytest
 from faker import Faker
 from sqlalchemy import Engine
-from sqlalchemy.orm import Session
 from werkzeug.exceptions import NotFound
 
 from configs import dify_config
@@ -20,7 +19,7 @@ class TestFileService:
     """Integration tests for FileService using testcontainers."""
 
     @pytest.fixture
-    def engine(self, db_session_with_containers: Session):
+    def engine(self, db_session_with_containers):
         bind = db_session_with_containers.get_bind()
         assert isinstance(bind, Engine)
         return bind
@@ -47,7 +46,7 @@ class TestFileService:
                 "extract_processor": mock_extract_processor,
             }
 
-    def _create_test_account(self, db_session_with_containers: Session, mock_external_service_dependencies):
+    def _create_test_account(self, db_session_with_containers, mock_external_service_dependencies):
         """
         Helper method to create a test account for testing.
 
@@ -68,16 +67,18 @@ class TestFileService:
             status="active",
         )
 
-        db_session_with_containers.add(account)
-        db_session_with_containers.commit()
+        from extensions.ext_database import db
+
+        db.session.add(account)
+        db.session.commit()
 
         # Create tenant for the account
         tenant = Tenant(
             name=fake.company(),
             status="normal",
         )
-        db_session_with_containers.add(tenant)
-        db_session_with_containers.commit()
+        db.session.add(tenant)
+        db.session.commit()
 
         # Create tenant-account join
         from models.account import TenantAccountJoin, TenantAccountRole
@@ -88,15 +89,15 @@ class TestFileService:
             role=TenantAccountRole.OWNER,
             current=True,
         )
-        db_session_with_containers.add(join)
-        db_session_with_containers.commit()
+        db.session.add(join)
+        db.session.commit()
 
         # Set current tenant for account
         account.current_tenant = tenant
 
         return account
 
-    def _create_test_end_user(self, db_session_with_containers: Session, mock_external_service_dependencies):
+    def _create_test_end_user(self, db_session_with_containers, mock_external_service_dependencies):
         """
         Helper method to create a test end user for testing.
 
@@ -117,14 +118,14 @@ class TestFileService:
             session_id=fake.uuid4(),
         )
 
-        db_session_with_containers.add(end_user)
-        db_session_with_containers.commit()
+        from extensions.ext_database import db
+
+        db.session.add(end_user)
+        db.session.commit()
 
         return end_user
 
-    def _create_test_upload_file(
-        self, db_session_with_containers: Session, mock_external_service_dependencies, account
-    ):
+    def _create_test_upload_file(self, db_session_with_containers, mock_external_service_dependencies, account):
         """
         Helper method to create a test upload file for testing.
 
@@ -154,13 +155,15 @@ class TestFileService:
             source_url="",
         )
 
-        db_session_with_containers.add(upload_file)
-        db_session_with_containers.commit()
+        from extensions.ext_database import db
+
+        db.session.add(upload_file)
+        db.session.commit()
 
         return upload_file
 
     # Test upload_file method
-    def test_upload_file_success(self, db_session_with_containers: Session, engine, mock_external_service_dependencies):
+    def test_upload_file_success(self, db_session_with_containers, engine, mock_external_service_dependencies):
         """
         Test successful file upload with valid parameters.
         """
@@ -193,9 +196,7 @@ class TestFileService:
 
         assert upload_file.id is not None
 
-    def test_upload_file_with_end_user(
-        self, db_session_with_containers: Session, engine, mock_external_service_dependencies
-    ):
+    def test_upload_file_with_end_user(self, db_session_with_containers, engine, mock_external_service_dependencies):
         """
         Test file upload with end user instead of account.
         """
@@ -218,7 +219,7 @@ class TestFileService:
         assert upload_file.created_by_role == CreatorUserRole.END_USER
 
     def test_upload_file_with_datasets_source(
-        self, db_session_with_containers: Session, engine, mock_external_service_dependencies
+        self, db_session_with_containers, engine, mock_external_service_dependencies
     ):
         """
         Test file upload with datasets source parameter.
@@ -243,7 +244,7 @@ class TestFileService:
         assert upload_file.source_url == "https://example.com/source"
 
     def test_upload_file_invalid_filename_characters(
-        self, db_session_with_containers: Session, engine, mock_external_service_dependencies
+        self, db_session_with_containers, engine, mock_external_service_dependencies
     ):
         """
         Test file upload with invalid filename characters.
@@ -264,7 +265,7 @@ class TestFileService:
             )
 
     def test_upload_file_filename_too_long(
-        self, db_session_with_containers: Session, engine, mock_external_service_dependencies
+        self, db_session_with_containers, engine, mock_external_service_dependencies
     ):
         """
         Test file upload with filename that exceeds length limit.
@@ -294,7 +295,7 @@ class TestFileService:
         assert len(base_name) <= 200
 
     def test_upload_file_datasets_unsupported_type(
-        self, db_session_with_containers: Session, engine, mock_external_service_dependencies
+        self, db_session_with_containers, engine, mock_external_service_dependencies
     ):
         """
         Test file upload for datasets with unsupported file type.
@@ -315,9 +316,7 @@ class TestFileService:
                 source="datasets",
             )
 
-    def test_upload_file_too_large(
-        self, db_session_with_containers: Session, engine, mock_external_service_dependencies
-    ):
+    def test_upload_file_too_large(self, db_session_with_containers, engine, mock_external_service_dependencies):
         """
         Test file upload with file size exceeding limit.
         """
@@ -339,7 +338,7 @@ class TestFileService:
 
     # Test is_file_size_within_limit method
     def test_is_file_size_within_limit_image_success(
-        self, db_session_with_containers: Session, engine, mock_external_service_dependencies
+        self, db_session_with_containers, engine, mock_external_service_dependencies
     ):
         """
         Test file size check for image files within limit.
@@ -352,7 +351,7 @@ class TestFileService:
         assert result is True
 
     def test_is_file_size_within_limit_video_success(
-        self, db_session_with_containers: Session, engine, mock_external_service_dependencies
+        self, db_session_with_containers, engine, mock_external_service_dependencies
     ):
         """
         Test file size check for video files within limit.
@@ -365,7 +364,7 @@ class TestFileService:
         assert result is True
 
     def test_is_file_size_within_limit_audio_success(
-        self, db_session_with_containers: Session, engine, mock_external_service_dependencies
+        self, db_session_with_containers, engine, mock_external_service_dependencies
     ):
         """
         Test file size check for audio files within limit.
@@ -378,7 +377,7 @@ class TestFileService:
         assert result is True
 
     def test_is_file_size_within_limit_document_success(
-        self, db_session_with_containers: Session, engine, mock_external_service_dependencies
+        self, db_session_with_containers, engine, mock_external_service_dependencies
     ):
         """
         Test file size check for document files within limit.
@@ -391,7 +390,7 @@ class TestFileService:
         assert result is True
 
     def test_is_file_size_within_limit_image_exceeded(
-        self, db_session_with_containers: Session, engine, mock_external_service_dependencies
+        self, db_session_with_containers, engine, mock_external_service_dependencies
     ):
         """
         Test file size check for image files exceeding limit.
@@ -404,7 +403,7 @@ class TestFileService:
         assert result is False
 
     def test_is_file_size_within_limit_unknown_extension(
-        self, db_session_with_containers: Session, engine, mock_external_service_dependencies
+        self, db_session_with_containers, engine, mock_external_service_dependencies
     ):
         """
         Test file size check for unknown file extension.
@@ -417,7 +416,7 @@ class TestFileService:
         assert result is True
 
     # Test upload_text method
-    def test_upload_text_success(self, db_session_with_containers: Session, engine, mock_external_service_dependencies):
+    def test_upload_text_success(self, db_session_with_containers, engine, mock_external_service_dependencies):
         """
         Test successful text upload.
         """
@@ -448,9 +447,7 @@ class TestFileService:
         # Verify storage was called
         mock_external_service_dependencies["storage"].save.assert_called_once()
 
-    def test_upload_text_name_too_long(
-        self, db_session_with_containers: Session, engine, mock_external_service_dependencies
-    ):
+    def test_upload_text_name_too_long(self, db_session_with_containers, engine, mock_external_service_dependencies):
         """
         Test text upload with name that exceeds length limit.
         """
@@ -475,9 +472,7 @@ class TestFileService:
         assert upload_file.name == "a" * 200
 
     # Test get_file_preview method
-    def test_get_file_preview_success(
-        self, db_session_with_containers: Session, engine, mock_external_service_dependencies
-    ):
+    def test_get_file_preview_success(self, db_session_with_containers, engine, mock_external_service_dependencies):
         """
         Test successful file preview generation.
         """
@@ -489,8 +484,9 @@ class TestFileService:
 
         # Update file to have document extension
         upload_file.extension = "pdf"
+        from extensions.ext_database import db
 
-        db_session_with_containers.commit()
+        db.session.commit()
 
         result = FileService(engine).get_file_preview(file_id=upload_file.id)
 
@@ -498,7 +494,7 @@ class TestFileService:
         mock_external_service_dependencies["extract_processor"].load_from_upload_file.assert_called_once()
 
     def test_get_file_preview_file_not_found(
-        self, db_session_with_containers: Session, engine, mock_external_service_dependencies
+        self, db_session_with_containers, engine, mock_external_service_dependencies
     ):
         """
         Test file preview with non-existent file.
@@ -510,7 +506,7 @@ class TestFileService:
             FileService(engine).get_file_preview(file_id=non_existent_id)
 
     def test_get_file_preview_unsupported_file_type(
-        self, db_session_with_containers: Session, engine, mock_external_service_dependencies
+        self, db_session_with_containers, engine, mock_external_service_dependencies
     ):
         """
         Test file preview with unsupported file type.
@@ -523,14 +519,15 @@ class TestFileService:
 
         # Update file to have non-document extension
         upload_file.extension = "jpg"
+        from extensions.ext_database import db
 
-        db_session_with_containers.commit()
+        db.session.commit()
 
         with pytest.raises(UnsupportedFileTypeError):
             FileService(engine).get_file_preview(file_id=upload_file.id)
 
     def test_get_file_preview_text_truncation(
-        self, db_session_with_containers: Session, engine, mock_external_service_dependencies
+        self, db_session_with_containers, engine, mock_external_service_dependencies
     ):
         """
         Test file preview with text that exceeds preview limit.
@@ -543,8 +540,9 @@ class TestFileService:
 
         # Update file to have document extension
         upload_file.extension = "pdf"
+        from extensions.ext_database import db
 
-        db_session_with_containers.commit()
+        db.session.commit()
 
         # Mock long text content
         long_text = "x" * 5000  # Longer than PREVIEW_WORDS_LIMIT
@@ -556,9 +554,7 @@ class TestFileService:
         assert result == "x" * 3000
 
     # Test get_image_preview method
-    def test_get_image_preview_success(
-        self, db_session_with_containers: Session, engine, mock_external_service_dependencies
-    ):
+    def test_get_image_preview_success(self, db_session_with_containers, engine, mock_external_service_dependencies):
         """
         Test successful image preview generation.
         """
@@ -570,8 +566,9 @@ class TestFileService:
 
         # Update file to have image extension
         upload_file.extension = "jpg"
+        from extensions.ext_database import db
 
-        db_session_with_containers.commit()
+        db.session.commit()
 
         timestamp = "1234567890"
         nonce = "test_nonce"
@@ -589,7 +586,7 @@ class TestFileService:
         mock_external_service_dependencies["file_helpers"].verify_image_signature.assert_called_once()
 
     def test_get_image_preview_invalid_signature(
-        self, db_session_with_containers: Session, engine, mock_external_service_dependencies
+        self, db_session_with_containers, engine, mock_external_service_dependencies
     ):
         """
         Test image preview with invalid signature.
@@ -616,7 +613,7 @@ class TestFileService:
             )
 
     def test_get_image_preview_file_not_found(
-        self, db_session_with_containers: Session, engine, mock_external_service_dependencies
+        self, db_session_with_containers, engine, mock_external_service_dependencies
     ):
         """
         Test image preview with non-existent file.
@@ -637,7 +634,7 @@ class TestFileService:
             )
 
     def test_get_image_preview_unsupported_file_type(
-        self, db_session_with_containers: Session, engine, mock_external_service_dependencies
+        self, db_session_with_containers, engine, mock_external_service_dependencies
     ):
         """
         Test image preview with non-image file type.
@@ -650,8 +647,9 @@ class TestFileService:
 
         # Update file to have non-image extension
         upload_file.extension = "pdf"
+        from extensions.ext_database import db
 
-        db_session_with_containers.commit()
+        db.session.commit()
 
         timestamp = "1234567890"
         nonce = "test_nonce"
@@ -667,7 +665,7 @@ class TestFileService:
 
     # Test get_file_generator_by_file_id method
     def test_get_file_generator_by_file_id_success(
-        self, db_session_with_containers: Session, engine, mock_external_service_dependencies
+        self, db_session_with_containers, engine, mock_external_service_dependencies
     ):
         """
         Test successful file generator retrieval.
@@ -694,7 +692,7 @@ class TestFileService:
         mock_external_service_dependencies["file_helpers"].verify_file_signature.assert_called_once()
 
     def test_get_file_generator_by_file_id_invalid_signature(
-        self, db_session_with_containers: Session, engine, mock_external_service_dependencies
+        self, db_session_with_containers, engine, mock_external_service_dependencies
     ):
         """
         Test file generator retrieval with invalid signature.
@@ -721,7 +719,7 @@ class TestFileService:
             )
 
     def test_get_file_generator_by_file_id_file_not_found(
-        self, db_session_with_containers: Session, engine, mock_external_service_dependencies
+        self, db_session_with_containers, engine, mock_external_service_dependencies
     ):
         """
         Test file generator retrieval with non-existent file.
@@ -743,7 +741,7 @@ class TestFileService:
 
     # Test get_public_image_preview method
     def test_get_public_image_preview_success(
-        self, db_session_with_containers: Session, engine, mock_external_service_dependencies
+        self, db_session_with_containers, engine, mock_external_service_dependencies
     ):
         """
         Test successful public image preview generation.
@@ -756,8 +754,9 @@ class TestFileService:
 
         # Update file to have image extension
         upload_file.extension = "jpg"
+        from extensions.ext_database import db
 
-        db_session_with_containers.commit()
+        db.session.commit()
 
         generator, mime_type = FileService(engine).get_public_image_preview(file_id=upload_file.id)
 
@@ -766,7 +765,7 @@ class TestFileService:
         mock_external_service_dependencies["storage"].load.assert_called_once()
 
     def test_get_public_image_preview_file_not_found(
-        self, db_session_with_containers: Session, engine, mock_external_service_dependencies
+        self, db_session_with_containers, engine, mock_external_service_dependencies
     ):
         """
         Test public image preview with non-existent file.
@@ -778,7 +777,7 @@ class TestFileService:
             FileService(engine).get_public_image_preview(file_id=non_existent_id)
 
     def test_get_public_image_preview_unsupported_file_type(
-        self, db_session_with_containers: Session, engine, mock_external_service_dependencies
+        self, db_session_with_containers, engine, mock_external_service_dependencies
     ):
         """
         Test public image preview with non-image file type.
@@ -791,16 +790,15 @@ class TestFileService:
 
         # Update file to have non-image extension
         upload_file.extension = "pdf"
+        from extensions.ext_database import db
 
-        db_session_with_containers.commit()
+        db.session.commit()
 
         with pytest.raises(UnsupportedFileTypeError):
             FileService(engine).get_public_image_preview(file_id=upload_file.id)
 
     # Test edge cases and boundary conditions
-    def test_upload_file_empty_content(
-        self, db_session_with_containers: Session, engine, mock_external_service_dependencies
-    ):
+    def test_upload_file_empty_content(self, db_session_with_containers, engine, mock_external_service_dependencies):
         """
         Test file upload with empty content.
         """
@@ -822,7 +820,7 @@ class TestFileService:
         assert upload_file.size == 0
 
     def test_upload_file_special_characters_in_name(
-        self, db_session_with_containers: Session, engine, mock_external_service_dependencies
+        self, db_session_with_containers, engine, mock_external_service_dependencies
     ):
         """
         Test file upload with special characters in filename (but valid ones).
@@ -845,7 +843,7 @@ class TestFileService:
         assert upload_file.name == filename
 
     def test_upload_file_different_case_extensions(
-        self, db_session_with_containers: Session, engine, mock_external_service_dependencies
+        self, db_session_with_containers, engine, mock_external_service_dependencies
     ):
         """
         Test file upload with different case extensions.
@@ -867,9 +865,7 @@ class TestFileService:
         assert upload_file is not None
         assert upload_file.extension == "pdf"  # Should be converted to lowercase
 
-    def test_upload_text_empty_text(
-        self, db_session_with_containers: Session, engine, mock_external_service_dependencies
-    ):
+    def test_upload_text_empty_text(self, db_session_with_containers, engine, mock_external_service_dependencies):
         """
         Test text upload with empty text.
         """
@@ -892,9 +888,7 @@ class TestFileService:
         assert upload_file is not None
         assert upload_file.size == 0
 
-    def test_file_size_limits_edge_cases(
-        self, db_session_with_containers: Session, engine, mock_external_service_dependencies
-    ):
+    def test_file_size_limits_edge_cases(self, db_session_with_containers, engine, mock_external_service_dependencies):
         """
         Test file size limits with edge case values.
         """
@@ -914,9 +908,7 @@ class TestFileService:
             result = FileService(engine).is_file_size_within_limit(extension=extension, file_size=file_size)
             assert result is False
 
-    def test_upload_file_with_source_url(
-        self, db_session_with_containers: Session, engine, mock_external_service_dependencies
-    ):
+    def test_upload_file_with_source_url(self, db_session_with_containers, engine, mock_external_service_dependencies):
         """
         Test file upload with source URL that gets overridden by signed URL.
         """
@@ -954,7 +946,7 @@ class TestFileService:
 
     # Test file extension blacklist
     def test_upload_file_blocked_extension(
-        self, db_session_with_containers: Session, engine, mock_external_service_dependencies
+        self, db_session_with_containers, engine, mock_external_service_dependencies
     ):
         """
         Test file upload with blocked extension.
@@ -977,7 +969,7 @@ class TestFileService:
                 )
 
     def test_upload_file_blocked_extension_case_insensitive(
-        self, db_session_with_containers: Session, engine, mock_external_service_dependencies
+        self, db_session_with_containers, engine, mock_external_service_dependencies
     ):
         """
         Test file upload with blocked extension (case insensitive).
@@ -1000,9 +992,7 @@ class TestFileService:
                     user=account,
                 )
 
-    def test_upload_file_not_in_blacklist(
-        self, db_session_with_containers: Session, engine, mock_external_service_dependencies
-    ):
+    def test_upload_file_not_in_blacklist(self, db_session_with_containers, engine, mock_external_service_dependencies):
         """
         Test file upload with extension not in blacklist.
         """
@@ -1026,9 +1016,7 @@ class TestFileService:
             assert upload_file.name == filename
             assert upload_file.extension == "pdf"
 
-    def test_upload_file_empty_blacklist(
-        self, db_session_with_containers: Session, engine, mock_external_service_dependencies
-    ):
+    def test_upload_file_empty_blacklist(self, db_session_with_containers, engine, mock_external_service_dependencies):
         """
         Test file upload with empty blacklist (default behavior).
         """
@@ -1053,7 +1041,7 @@ class TestFileService:
             assert upload_file.extension == "sh"
 
     def test_upload_file_multiple_blocked_extensions(
-        self, db_session_with_containers: Session, engine, mock_external_service_dependencies
+        self, db_session_with_containers, engine, mock_external_service_dependencies
     ):
         """
         Test file upload with multiple blocked extensions.
@@ -1078,7 +1066,7 @@ class TestFileService:
                     )
 
     def test_upload_file_no_extension_with_blacklist(
-        self, db_session_with_containers: Session, engine, mock_external_service_dependencies
+        self, db_session_with_containers, engine, mock_external_service_dependencies
     ):
         """
         Test file upload with no extension when blacklist is configured.

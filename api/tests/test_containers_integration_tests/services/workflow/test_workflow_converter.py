@@ -3,7 +3,6 @@ from unittest.mock import patch
 
 import pytest
 from faker import Faker
-from sqlalchemy.orm import Session
 
 from core.app.app_config.entities import (
     DatasetEntity,
@@ -12,9 +11,9 @@ from core.app.app_config.entities import (
     ModelConfigEntity,
     PromptTemplateEntity,
 )
+from core.model_runtime.entities.llm_entities import LLMMode
 from core.prompt.utils.prompt_template_parser import PromptTemplateParser
-from dify_graph.model_runtime.entities.llm_entities import LLMMode
-from dify_graph.variables.input_entities import VariableEntity, VariableEntityType
+from core.workflow.variables.input_entities import VariableEntity, VariableEntityType
 from models import Account, Tenant
 from models.api_based_extension import APIBasedExtension
 from models.model import App, AppMode, AppModelConfig
@@ -80,7 +79,7 @@ class TestWorkflowConverter:
         mock_config.app_model_config_dict = {}
         return mock_config
 
-    def _create_test_account_and_tenant(self, db_session_with_containers: Session, mock_external_service_dependencies):
+    def _create_test_account_and_tenant(self, db_session_with_containers, mock_external_service_dependencies):
         """
         Helper method to create a test account and tenant for testing.
 
@@ -101,16 +100,18 @@ class TestWorkflowConverter:
             status="active",
         )
 
-        db_session_with_containers.add(account)
-        db_session_with_containers.commit()
+        from extensions.ext_database import db
+
+        db.session.add(account)
+        db.session.commit()
 
         # Create tenant for the account
         tenant = Tenant(
             name=fake.company(),
             status="normal",
         )
-        db_session_with_containers.add(tenant)
-        db_session_with_containers.commit()
+        db.session.add(tenant)
+        db.session.commit()
 
         # Create tenant-account join
         from models.account import TenantAccountJoin, TenantAccountRole
@@ -121,17 +122,15 @@ class TestWorkflowConverter:
             role=TenantAccountRole.OWNER,
             current=True,
         )
-        db_session_with_containers.add(join)
-        db_session_with_containers.commit()
+        db.session.add(join)
+        db.session.commit()
 
         # Set current tenant for account
         account.current_tenant = tenant
 
         return account, tenant
 
-    def _create_test_app(
-        self, db_session_with_containers: Session, mock_external_service_dependencies, tenant, account
-    ):
+    def _create_test_app(self, db_session_with_containers, mock_external_service_dependencies, tenant, account):
         """
         Helper method to create a test app for testing.
 
@@ -164,8 +163,10 @@ class TestWorkflowConverter:
             updated_by=account.id,
         )
 
-        db_session_with_containers.add(app)
-        db_session_with_containers.commit()
+        from extensions.ext_database import db
+
+        db.session.add(app)
+        db.session.commit()
 
         # Create app model config
         app_model_config = AppModelConfig(
@@ -176,16 +177,16 @@ class TestWorkflowConverter:
             created_by=account.id,
             updated_by=account.id,
         )
-        db_session_with_containers.add(app_model_config)
-        db_session_with_containers.commit()
+        db.session.add(app_model_config)
+        db.session.commit()
 
         # Link app model config to app
         app.app_model_config_id = app_model_config.id
-        db_session_with_containers.commit()
+        db.session.commit()
 
         return app
 
-    def test_convert_to_workflow_success(self, db_session_with_containers: Session, mock_external_service_dependencies):
+    def test_convert_to_workflow_success(self, db_session_with_containers, mock_external_service_dependencies):
         """
         Test successful conversion of app to workflow.
 
@@ -224,18 +225,19 @@ class TestWorkflowConverter:
         assert new_app.created_by == account.id
 
         # Verify database state
+        from extensions.ext_database import db
 
-        db_session_with_containers.refresh(new_app)
+        db.session.refresh(new_app)
         assert new_app.id is not None
 
         # Verify workflow was created
-        workflow = db_session_with_containers.query(Workflow).where(Workflow.app_id == new_app.id).first()
+        workflow = db.session.query(Workflow).where(Workflow.app_id == new_app.id).first()
         assert workflow is not None
         assert workflow.tenant_id == app.tenant_id
         assert workflow.type == "chat"
 
     def test_convert_to_workflow_without_app_model_config_error(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
+        self, db_session_with_containers, mock_external_service_dependencies
     ):
         """
         Test error handling when app model config is missing.
@@ -268,14 +270,16 @@ class TestWorkflowConverter:
             updated_by=account.id,
         )
 
-        db_session_with_containers.add(app)
-        db_session_with_containers.commit()
+        from extensions.ext_database import db
+
+        db.session.add(app)
+        db.session.commit()
 
         # Act & Assert: Verify proper error handling
         workflow_converter = WorkflowConverter()
 
         # Check initial state
-        initial_workflow_count = db_session_with_containers.query(Workflow).count()
+        initial_workflow_count = db.session.query(Workflow).count()
 
         with pytest.raises(ValueError, match="App model config is required"):
             workflow_converter.convert_to_workflow(
@@ -290,12 +294,12 @@ class TestWorkflowConverter:
         # Verify database state remains unchanged
         # The workflow creation happens in convert_app_model_config_to_workflow
         # which is called before the app_model_config check, so we need to clean up
-        db_session_with_containers.rollback()
-        final_workflow_count = db_session_with_containers.query(Workflow).count()
+        db.session.rollback()
+        final_workflow_count = db.session.query(Workflow).count()
         assert final_workflow_count == initial_workflow_count
 
     def test_convert_app_model_config_to_workflow_success(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
+        self, db_session_with_containers, mock_external_service_dependencies
     ):
         """
         Test successful conversion of app model config to workflow.
@@ -352,17 +356,16 @@ class TestWorkflowConverter:
         assert answer_node["id"] == "answer"
 
         # Verify database state
+        from extensions.ext_database import db
 
-        db_session_with_containers.refresh(workflow)
+        db.session.refresh(workflow)
         assert workflow.id is not None
 
         # Verify features were set
         features = json.loads(workflow._features) if workflow._features else {}
         assert isinstance(features, dict)
 
-    def test_convert_to_start_node_success(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
-    ):
+    def test_convert_to_start_node_success(self, db_session_with_containers, mock_external_service_dependencies):
         """
         Test successful conversion to start node.
 
@@ -407,9 +410,7 @@ class TestWorkflowConverter:
         assert second_variable["label"] == "Number Input"
         assert second_variable["type"] == "number"
 
-    def test_convert_to_http_request_node_success(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
-    ):
+    def test_convert_to_http_request_node_success(self, db_session_with_containers, mock_external_service_dependencies):
         """
         Test successful conversion to HTTP request node.
 
@@ -435,8 +436,10 @@ class TestWorkflowConverter:
             api_endpoint="https://api.example.com/test",
         )
 
-        db_session_with_containers.add(api_based_extension)
-        db_session_with_containers.commit()
+        from extensions.ext_database import db
+
+        db.session.add(api_based_extension)
+        db.session.commit()
 
         # Mock encrypter
         mock_external_service_dependencies["encrypter"].decrypt_token.return_value = "decrypted_api_key"
@@ -486,7 +489,7 @@ class TestWorkflowConverter:
         assert external_data_variable_node_mapping["external_data"] == code_node["id"]
 
     def test_convert_to_knowledge_retrieval_node_success(
-        self, db_session_with_containers: Session, mock_external_service_dependencies
+        self, db_session_with_containers, mock_external_service_dependencies
     ):
         """
         Test successful conversion to knowledge retrieval node.

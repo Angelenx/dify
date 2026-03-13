@@ -7,6 +7,7 @@ import re
 from typing import Any
 
 from core.model_manager import ModelInstance
+from core.model_runtime.model_providers.__base.tokenizers.gpt2_tokenizer import GPT2Tokenizer
 from core.rag.splitter.text_splitter import (
     TS,
     Collection,
@@ -15,7 +16,6 @@ from core.rag.splitter.text_splitter import (
     Set,
     Union,
 )
-from dify_graph.model_runtime.model_providers.__base.tokenizers.gpt2_tokenizer import GPT2Tokenizer
 
 
 class EnhanceRecursiveCharacterTextSplitter(RecursiveCharacterTextSplitter):

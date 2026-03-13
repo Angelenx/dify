@@ -6,9 +6,9 @@ from collections.abc import Mapping
 from typing import Any, Generic, TypeAlias, TypeVar, overload
 
 from configs import dify_config
-from dify_graph.file.models import File
-from dify_graph.nodes.variable_assigner.common.helpers import UpdatedVariable
-from dify_graph.variables.segments import (
+from core.workflow.file.models import File
+from core.workflow.nodes.variable_assigner.common.helpers import UpdatedVariable
+from core.workflow.variables.segments import (
     ArrayFileSegment,
     ArraySegment,
     BooleanSegment,
@@ -20,7 +20,7 @@ from dify_graph.variables.segments import (
     Segment,
     StringSegment,
 )
-from dify_graph.variables.utils import dumps_with_segments
+from core.workflow.variables.utils import dumps_with_segments
 
 _MAX_DEPTH = 100
 
