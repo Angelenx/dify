@@ -4,10 +4,6 @@ import {
   useState,
 } from 'react'
 import { useTranslation } from 'react-i18next'
-import {
-  Copy,
-  CopyCheck,
-} from '@/app/components/base/icons/src/vender/line/files'
 import { writeTextToClipboard } from '@/utils/clipboard'
 import Tooltip from '../tooltip'
 
@@ -36,22 +32,20 @@ const CopyIcon = ({ content }: Props) => {
     setCopied(false)
   }, [])
 
+  const tooltipText = copied
+    ? t(`${prefixEmbedded}.copied`, { ns: 'appOverview' })
+    : t(`${prefixEmbedded}.copy`, { ns: 'appOverview' })
+  /* v8 ignore next -- i18n test mock always returns a non-empty string; runtime fallback is defensive. -- @preserve */
+  const safeTooltipText = tooltipText || ''
+
   return (
     <Tooltip
-      popupContent={
-        (copied
-          ? t(`${prefixEmbedded}.copied`, { ns: 'appOverview' })
-          : t(`${prefixEmbedded}.copy`, { ns: 'appOverview' })) || ''
-      }
+      popupContent={safeTooltipText}
     >
       <div onMouseLeave={handleMouseLeave}>
         {!copied
-          ? (
-              <Copy className="mx-1 h-3.5 w-3.5 cursor-pointer text-text-tertiary" onClick={handleCopy} />
-            )
-          : (
-              <CopyCheck className="mx-1 h-3.5 w-3.5 text-text-tertiary" />
-            )}
+          ? (<span className="i-custom-vender-line-files-copy mx-1 h-3.5 w-3.5 cursor-pointer text-text-tertiary" onClick={handleCopy} data-testid="copy-icon" />)
+          : (<span className="i-custom-vender-line-files-copy-check mx-1 h-3.5 w-3.5 text-text-tertiary" data-testid="copied-icon" />)}
       </div>
     </Tooltip>
   )

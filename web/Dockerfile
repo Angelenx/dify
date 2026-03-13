@@ -1,5 +1,5 @@
 # base image
-FROM node:24-alpine AS base
+FROM node:22-alpine AS base
 LABEL maintainer="takatost@gmail.com"
 
 # if you located in China, you can use aliyun mirror to speed up
@@ -34,8 +34,8 @@ WORKDIR /app/web
 COPY --from=packages /app/web/ .
 COPY . .
 
-ENV NODE_OPTIONS="--max-old-space-size=8192"
-RUN pnpm build:docker
+ENV NODE_OPTIONS="--max-old-space-size=4096"
+RUN pnpm build
 
 
 # production stage
