@@ -9,8 +9,8 @@ from werkzeug.datastructures import FileStorage
 
 from constants import AUDIO_EXTENSIONS
 from core.model_manager import ModelManager
-from dify_graph.model_runtime.entities.model_entities import ModelType
 from extensions.ext_database import db
+from graphon.model_runtime.entities.model_entities import ModelType
 from models.enums import MessageStatus
 from models.model import App, AppMode, Message
 from services.errors.audio import (
@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 class AudioService:
     @classmethod
-    def transcript_asr(cls, app_model: App, file: FileStorage, end_user: str | None = None):
+    def transcript_asr(cls, app_model: App, file: FileStorage | None, end_user: str | None = None):
         if app_model.mode in {AppMode.ADVANCED_CHAT, AppMode.WORKFLOW}:
             workflow = app_model.workflow
             if workflow is None:
@@ -54,14 +54,14 @@ class AudioService:
         if extension not in [f"audio/{ext}" for ext in AUDIO_EXTENSIONS]:
             raise UnsupportedAudioTypeServiceError()
 
-        file_content = file.read()
+        file_content = file.stream.read()
         file_size = len(file_content)
 
         if file_size > FILE_SIZE_LIMIT:
             message = f"Audio size larger than {FILE_SIZE} mb"
             raise AudioTooLargeServiceError(message)
 
-        model_manager = ModelManager()
+        model_manager = ModelManager.for_tenant(tenant_id=app_model.tenant_id, user_id=end_user)
         model_instance = model_manager.get_default_model_instance(
             tenant_id=app_model.tenant_id, model_type=ModelType.SPEECH2TEXT
         )
@@ -71,7 +71,7 @@ class AudioService:
         buffer = io.BytesIO(file_content)
         buffer.name = "temp.mp3"
 
-        return {"text": model_instance.invoke_speech2text(file=buffer, user=end_user)}
+        return {"text": model_instance.invoke_speech2text(file=buffer)}
 
     @classmethod
     def transcript_tts(
@@ -109,7 +109,7 @@ class AudioService:
 
                         voice = cast(str | None, text_to_speech_dict.get("voice"))
 
-            model_manager = ModelManager()
+            model_manager = ModelManager.for_tenant(tenant_id=app_model.tenant_id, user_id=end_user)
             model_instance = model_manager.get_default_model_instance(
                 tenant_id=app_model.tenant_id, model_type=ModelType.TTS
             )
@@ -123,9 +123,7 @@ class AudioService:
                     else:
                         raise ValueError("Sorry, no voice available.")
 
-                return model_instance.invoke_tts(
-                    content_text=text_content.strip(), user=end_user, tenant_id=app_model.tenant_id, voice=voice
-                )
+                return model_instance.invoke_tts(content_text=text_content.strip(), voice=voice)
             except Exception as e:
                 raise e
 
@@ -134,7 +132,7 @@ class AudioService:
                 uuid.UUID(message_id)
             except ValueError:
                 return None
-            message = db.session.query(Message).where(Message.id == message_id).first()
+            message = db.session.get(Message, message_id)
             if message is None:
                 return None
             if message.answer == "" and message.status in {MessageStatus.NORMAL, MessageStatus.PAUSED}:
@@ -143,19 +141,19 @@ class AudioService:
             else:
                 response = invoke_tts(text_content=message.answer, app_model=app_model, voice=voice, is_draft=is_draft)
                 if isinstance(response, Generator):
-                    return Response(stream_with_context(response), content_type="audio/mpeg")
+                    return Response(stream_with_context(response), content_type="audio/mpeg")  # type: ignore
                 return response
         else:
             if text is None:
                 raise ValueError("Text is required")
             response = invoke_tts(text_content=text, app_model=app_model, voice=voice, is_draft=is_draft)
             if isinstance(response, Generator):
-                return Response(stream_with_context(response), content_type="audio/mpeg")
+                return Response(stream_with_context(response), content_type="audio/mpeg")  # type: ignore
             return response
 
     @classmethod
     def transcript_tts_voices(cls, tenant_id: str, language: str):
-        model_manager = ModelManager()
+        model_manager = ModelManager.for_tenant(tenant_id=tenant_id)
         model_instance = model_manager.get_default_model_instance(tenant_id=tenant_id, model_type=ModelType.TTS)
         if model_instance is None:
             raise ProviderNotSupportTextToSpeechServiceError()

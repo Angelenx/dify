@@ -49,31 +49,6 @@ vi.mock('../modal', () => ({
   },
 }))
 
-// Mock the Confirm dialog
-type ConfirmDialogProps = {
-  isShow: boolean
-  onConfirm: () => void
-  onCancel: () => void
-  isLoading: boolean
-}
-
-vi.mock('@/app/components/base/confirm', () => ({
-  default: ({ isShow, onConfirm, onCancel, isLoading }: ConfirmDialogProps) => {
-    if (!isShow)
-      return null
-    return (
-      <div data-testid="confirm-dialog">
-        <button data-testid="confirm-delete-btn" onClick={onConfirm} disabled={isLoading}>
-          {isLoading ? 'Deleting...' : 'Confirm Delete'}
-        </button>
-        <button data-testid="cancel-delete-btn" onClick={onCancel}>
-          Cancel
-        </button>
-      </div>
-    )
-  },
-}))
-
 // Mock the OperationDropdown
 type OperationDropdownProps = {
   onEdit: () => void
@@ -172,6 +147,9 @@ describe('MCPCard', () => {
     onDeleted: vi.fn(),
   }
 
+  const getDeleteConfirmButton = () => screen.getByRole('button', { name: 'common.operation.confirm' })
+  const getDeleteCancelButton = () => screen.getByRole('button', { name: 'common.operation.cancel' })
+
   beforeEach(() => {
     mockUpdateMCP.mockClear()
     mockDeleteMCP.mockClear()
@@ -204,6 +182,29 @@ describe('MCPCard', () => {
     it('should display update time', () => {
       render(<MCPCard {...defaultProps} />, { wrapper: createWrapper() })
       expect(screen.getByText(/tools.mcp.updateTime/)).toBeInTheDocument()
+    })
+
+    it('should use the Figma card shell', () => {
+      render(<MCPCard {...defaultProps} />, { wrapper: createWrapper() })
+
+      const card = screen.getByText('Test MCP Server').closest('.group')
+      expect(card).toHaveClass(
+        'overflow-hidden',
+        'rounded-xl',
+        'border-[0.5px]',
+        'border-components-panel-border',
+        'bg-components-panel-on-panel-item-bg',
+        'shadow-xs',
+      )
+    })
+
+    it('should render footer metadata without a tools icon', () => {
+      const { container } = render(<MCPCard {...defaultProps} />, { wrapper: createWrapper() })
+
+      expect(screen.getByText(/tools.mcp.toolsCount/)).toBeInTheDocument()
+      expect(screen.getByText(/tools.mcp.updateTime/)).toBeInTheDocument()
+      expect(screen.getByText('·')).toBeInTheDocument()
+      expect(container.querySelector('.i-ri-hammer-fill')).not.toBeInTheDocument()
     })
   })
 
@@ -295,11 +296,12 @@ describe('MCPCard', () => {
 
     it('should show red indicator when not configured', () => {
       const data = createMockData({ is_team_authorization: false })
-      render(
+      const { container } = render(
         <MCPCard {...defaultProps} data={data} />,
         { wrapper: createWrapper() },
       )
       expect(screen.getByText('tools.mcp.noConfigured')).toBeInTheDocument()
+      expect(container.querySelector('.size-1\\.5')).toBeInTheDocument()
     })
   })
 
@@ -450,7 +452,7 @@ describe('MCPCard', () => {
 
       // Confirm dialog should be shown
       await waitFor(() => {
-        expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument()
+        expect(screen.getByText('tools.mcp.delete')).toBeInTheDocument()
       })
     })
 
@@ -462,15 +464,14 @@ describe('MCPCard', () => {
       fireEvent.click(removeBtn)
 
       await waitFor(() => {
-        expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument()
+        expect(screen.getByText('tools.mcp.delete')).toBeInTheDocument()
       })
 
       // Cancel
-      const cancelBtn = screen.getByTestId('cancel-delete-btn')
-      fireEvent.click(cancelBtn)
+      fireEvent.click(getDeleteCancelButton())
 
       await waitFor(() => {
-        expect(screen.queryByTestId('confirm-dialog')).not.toBeInTheDocument()
+        expect(screen.queryByText('tools.mcp.delete')).not.toBeInTheDocument()
       })
     })
 
@@ -483,12 +484,11 @@ describe('MCPCard', () => {
       fireEvent.click(removeBtn)
 
       await waitFor(() => {
-        expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument()
+        expect(screen.getByText('tools.mcp.delete')).toBeInTheDocument()
       })
 
       // Confirm delete
-      const confirmBtn = screen.getByTestId('confirm-delete-btn')
-      fireEvent.click(confirmBtn)
+      fireEvent.click(getDeleteConfirmButton())
 
       await waitFor(() => {
         expect(mockDeleteMCP).toHaveBeenCalledWith('mcp-1')
@@ -506,12 +506,11 @@ describe('MCPCard', () => {
       fireEvent.click(removeBtn)
 
       await waitFor(() => {
-        expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument()
+        expect(screen.getByText('tools.mcp.delete')).toBeInTheDocument()
       })
 
       // Confirm delete
-      const confirmBtn = screen.getByTestId('confirm-delete-btn')
-      fireEvent.click(confirmBtn)
+      fireEvent.click(getDeleteConfirmButton())
 
       await waitFor(() => {
         expect(mockDeleteMCP).toHaveBeenCalled()

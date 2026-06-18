@@ -24,7 +24,7 @@ const IndexingTypeValues = {
 }
 
 // Mock next/link
-vi.mock('next/link', () => {
+vi.mock('@/next/link', () => {
   return function MockLink({ children, href }: { children: React.ReactNode, href: string }) {
     return <a href={href}>{children}</a>
   }
@@ -33,6 +33,9 @@ vi.mock('next/link', () => {
 // Mock modal context
 const mockSetShowAccountSettingModal = vi.fn()
 vi.mock('@/context/modal-context', () => ({
+  useModalContext: () => ({
+    setShowAccountSettingModal: mockSetShowAccountSettingModal,
+  }),
   useModalContextSelector: (selector: (state: { setShowAccountSettingModal: typeof mockSetShowAccountSettingModal }) => unknown) => {
     const state = {
       setShowAccountSettingModal: mockSetShowAccountSettingModal,
@@ -302,20 +305,20 @@ describe('DatasetUpdateForm', () => {
     it('should render without crashing', () => {
       render(<DatasetUpdateForm />)
 
-      expect(screen.getByTestId('top-bar')).toBeInTheDocument()
-      expect(screen.getByTestId('step-one')).toBeInTheDocument()
+      expect(screen.getByTestId('top-bar'))!.toBeInTheDocument()
+      expect(screen.getByTestId('step-one'))!.toBeInTheDocument()
     })
 
     it('should render TopBar with correct active index for step 1', () => {
       render(<DatasetUpdateForm />)
 
-      expect(screen.getByTestId('top-bar-active-index')).toHaveTextContent('0')
+      expect(screen.getByTestId('top-bar-active-index'))!.toHaveTextContent('0')
     })
 
     it('should render StepOne by default', () => {
       render(<DatasetUpdateForm />)
 
-      expect(screen.getByTestId('step-one')).toBeInTheDocument()
+      expect(screen.getByTestId('step-one'))!.toBeInTheDocument()
       expect(screen.queryByTestId('step-two')).not.toBeInTheDocument()
       expect(screen.queryByTestId('step-three')).not.toBeInTheDocument()
     })
@@ -326,6 +329,37 @@ describe('DatasetUpdateForm', () => {
       render(<DatasetUpdateForm />)
 
       // Assert - Loading component should be rendered (not the steps)
+      // Assert - Loading component should be rendered (not the steps)
+      // Assert - Loading component should be rendered (not the steps)
+      // Assert - Loading component should be rendered (not the steps)
+      // Assert - Loading component should be rendered (not the steps)
+      // Assert - Loading component should be rendered (not the steps)
+      // Assert - Loading component should be rendered (not the steps)
+      // Assert - Loading component should be rendered (not the steps)
+      // Assert - Loading component should be rendered (not the steps)
+      // Assert - Loading component should be rendered (not the steps)
+      // Assert - Loading component should be rendered (not the steps)
+      // Assert - Loading component should be rendered (not the steps)
+      // Assert - Loading component should be rendered (not the steps)
+      // Assert - Loading component should be rendered (not the steps)
+      // Assert - Loading component should be rendered (not the steps)
+      // Assert - Loading component should be rendered (not the steps)
+      // Assert - Loading component should be rendered (not the steps)
+      // Assert - Loading component should be rendered (not the steps)
+      // Assert - Loading component should be rendered (not the steps)
+      // Assert - Loading component should be rendered (not the steps)
+      // Assert - Loading component should be rendered (not the steps)
+      // Assert - Loading component should be rendered (not the steps)
+      // Assert - Loading component should be rendered (not the steps)
+      // Assert - Loading component should be rendered (not the steps)
+      // Assert - Loading component should be rendered (not the steps)
+      // Assert - Loading component should be rendered (not the steps)
+      // Assert - Loading component should be rendered (not the steps)
+      // Assert - Loading component should be rendered (not the steps)
+      // Assert - Loading component should be rendered (not the steps)
+      // Assert - Loading component should be rendered (not the steps)
+      // Assert - Loading component should be rendered (not the steps)
+      // Assert - Loading component should be rendered (not the steps)
       expect(screen.queryByTestId('step-one')).not.toBeInTheDocument()
     })
 
@@ -334,7 +368,7 @@ describe('DatasetUpdateForm', () => {
 
       render(<DatasetUpdateForm />)
 
-      expect(screen.getByText('datasetCreation.error.unavailable')).toBeInTheDocument()
+      expect(screen.getByText('datasetCreation.error.unavailable'))!.toBeInTheDocument()
     })
   })
 
@@ -344,7 +378,7 @@ describe('DatasetUpdateForm', () => {
       it('should pass datasetId to TopBar', () => {
         render(<DatasetUpdateForm datasetId="dataset-abc" />)
 
-        expect(screen.getByTestId('top-bar-dataset-id')).toHaveTextContent('dataset-abc')
+        expect(screen.getByTestId('top-bar-dataset-id'))!.toHaveTextContent('dataset-abc')
       })
 
       it('should pass datasetId to StepOne', () => {
@@ -356,7 +390,7 @@ describe('DatasetUpdateForm', () => {
       it('should render without datasetId', () => {
         render(<DatasetUpdateForm />)
 
-        expect(screen.getByTestId('top-bar-dataset-id')).toHaveTextContent('none')
+        expect(screen.getByTestId('top-bar-dataset-id'))!.toHaveTextContent('none')
         expect(stepOneProps.datasetId).toBeUndefined()
       })
     })
@@ -368,7 +402,7 @@ describe('DatasetUpdateForm', () => {
       it('should initialize with FILE data source type', () => {
         render(<DatasetUpdateForm />)
 
-        expect(screen.getByTestId('step-one-data-source-type')).toHaveTextContent(DataSourceType.FILE)
+        expect(screen.getByTestId('step-one-data-source-type'))!.toHaveTextContent(DataSourceType.FILE)
       })
 
       it('should update dataSourceType when changeType is called', () => {
@@ -376,7 +410,7 @@ describe('DatasetUpdateForm', () => {
 
         fireEvent.click(screen.getByTestId('step-one-change-type'))
 
-        expect(screen.getByTestId('step-one-data-source-type')).toHaveTextContent(DataSourceType.NOTION)
+        expect(screen.getByTestId('step-one-data-source-type'))!.toHaveTextContent(DataSourceType.NOTION)
       })
     })
 
@@ -384,8 +418,8 @@ describe('DatasetUpdateForm', () => {
       it('should initialize at step 1', () => {
         render(<DatasetUpdateForm />)
 
-        expect(screen.getByTestId('step-one')).toBeInTheDocument()
-        expect(screen.getByTestId('top-bar-active-index')).toHaveTextContent('0')
+        expect(screen.getByTestId('step-one'))!.toBeInTheDocument()
+        expect(screen.getByTestId('top-bar-active-index'))!.toHaveTextContent('0')
       })
 
       it('should transition to step 2 when nextStep is called', () => {
@@ -394,8 +428,8 @@ describe('DatasetUpdateForm', () => {
         fireEvent.click(screen.getByTestId('step-one-next'))
 
         expect(screen.queryByTestId('step-one')).not.toBeInTheDocument()
-        expect(screen.getByTestId('step-two')).toBeInTheDocument()
-        expect(screen.getByTestId('top-bar-active-index')).toHaveTextContent('1')
+        expect(screen.getByTestId('step-two'))!.toBeInTheDocument()
+        expect(screen.getByTestId('top-bar-active-index'))!.toHaveTextContent('1')
       })
 
       it('should transition to step 3 from step 2', () => {
@@ -408,8 +442,8 @@ describe('DatasetUpdateForm', () => {
         fireEvent.click(screen.getByTestId('step-two-next'))
 
         expect(screen.queryByTestId('step-two')).not.toBeInTheDocument()
-        expect(screen.getByTestId('step-three')).toBeInTheDocument()
-        expect(screen.getByTestId('top-bar-active-index')).toHaveTextContent('2')
+        expect(screen.getByTestId('step-three'))!.toBeInTheDocument()
+        expect(screen.getByTestId('top-bar-active-index'))!.toHaveTextContent('2')
       })
 
       it('should go back to step 1 from step 2', () => {
@@ -418,7 +452,7 @@ describe('DatasetUpdateForm', () => {
 
         fireEvent.click(screen.getByTestId('step-two-prev'))
 
-        expect(screen.getByTestId('step-one')).toBeInTheDocument()
+        expect(screen.getByTestId('step-one'))!.toBeInTheDocument()
         expect(screen.queryByTestId('step-two')).not.toBeInTheDocument()
       })
     })
@@ -427,7 +461,7 @@ describe('DatasetUpdateForm', () => {
       it('should initialize with empty file list', () => {
         render(<DatasetUpdateForm />)
 
-        expect(screen.getByTestId('step-one-files-count')).toHaveTextContent('0')
+        expect(screen.getByTestId('step-one-files-count'))!.toHaveTextContent('0')
       })
 
       it('should update file list when updateFileList is called', () => {
@@ -435,7 +469,7 @@ describe('DatasetUpdateForm', () => {
 
         fireEvent.click(screen.getByTestId('step-one-update-files'))
 
-        expect(screen.getByTestId('step-one-files-count')).toHaveTextContent('1')
+        expect(screen.getByTestId('step-one-files-count'))!.toHaveTextContent('1')
       })
     })
 
@@ -443,7 +477,7 @@ describe('DatasetUpdateForm', () => {
       it('should initialize with empty notion pages', () => {
         render(<DatasetUpdateForm />)
 
-        expect(screen.getByTestId('step-one-notion-pages-count')).toHaveTextContent('0')
+        expect(screen.getByTestId('step-one-notion-pages-count'))!.toHaveTextContent('0')
       })
 
       it('should update notion pages when updateNotionPages is called', () => {
@@ -451,7 +485,7 @@ describe('DatasetUpdateForm', () => {
 
         fireEvent.click(screen.getByTestId('step-one-update-notion-pages'))
 
-        expect(screen.getByTestId('step-one-notion-pages-count')).toHaveTextContent('1')
+        expect(screen.getByTestId('step-one-notion-pages-count'))!.toHaveTextContent('1')
       })
     })
 
@@ -459,7 +493,7 @@ describe('DatasetUpdateForm', () => {
       it('should initialize with empty website pages', () => {
         render(<DatasetUpdateForm />)
 
-        expect(screen.getByTestId('step-one-website-pages-count')).toHaveTextContent('0')
+        expect(screen.getByTestId('step-one-website-pages-count'))!.toHaveTextContent('0')
       })
 
       it('should update website pages when setWebsitePages is called', () => {
@@ -467,7 +501,7 @@ describe('DatasetUpdateForm', () => {
 
         fireEvent.click(screen.getByTestId('step-one-update-website-pages'))
 
-        expect(screen.getByTestId('step-one-website-pages-count')).toHaveTextContent('1')
+        expect(screen.getByTestId('step-one-website-pages-count'))!.toHaveTextContent('1')
       })
     })
   })
@@ -579,7 +613,7 @@ describe('DatasetUpdateForm', () => {
       fireEvent.click(screen.getByTestId('step-one-update-file-progress'))
 
       // Assert - Progress should be updated
-      expect(stepOneProps.files[0].progress).toBe(50)
+      expect(stepOneProps.files[0]!.progress).toBe(50)
     })
 
     it('should update notion credential id', () => {
@@ -599,7 +633,7 @@ describe('DatasetUpdateForm', () => {
 
       fireEvent.click(screen.getByTestId('step-one-next'))
 
-      expect(screen.getByTestId('step-two-is-api-key-set')).toHaveTextContent('true')
+      expect(screen.getByTestId('step-two-is-api-key-set'))!.toHaveTextContent('true')
     })
 
     it('should pass isAPIKeySet as false when embeddingsDefaultModel is undefined', () => {
@@ -608,7 +642,7 @@ describe('DatasetUpdateForm', () => {
 
       fireEvent.click(screen.getByTestId('step-one-next'))
 
-      expect(screen.getByTestId('step-two-is-api-key-set')).toHaveTextContent('false')
+      expect(screen.getByTestId('step-two-is-api-key-set'))!.toHaveTextContent('false')
     })
 
     it('should pass correct dataSourceType to StepTwo', () => {
@@ -617,7 +651,7 @@ describe('DatasetUpdateForm', () => {
 
       fireEvent.click(screen.getByTestId('step-one-next'))
 
-      expect(screen.getByTestId('step-two-data-source-type')).toHaveTextContent(DataSourceType.NOTION)
+      expect(screen.getByTestId('step-two-data-source-type'))!.toHaveTextContent(DataSourceType.NOTION)
     })
 
     it('should pass files mapped to file property to StepTwo', () => {
@@ -626,7 +660,7 @@ describe('DatasetUpdateForm', () => {
 
       fireEvent.click(screen.getByTestId('step-one-next'))
 
-      expect(screen.getByTestId('step-two-files-count')).toHaveTextContent('1')
+      expect(screen.getByTestId('step-two-files-count'))!.toHaveTextContent('1')
     })
 
     it('should update indexing type cache from StepTwo', () => {
@@ -637,7 +671,7 @@ describe('DatasetUpdateForm', () => {
 
       // Assert - Go to step 3 and verify
       fireEvent.click(screen.getByTestId('step-two-next'))
-      expect(screen.getByTestId('step-three-indexing-type')).toHaveTextContent('high_quality')
+      expect(screen.getByTestId('step-three-indexing-type'))!.toHaveTextContent('high_quality')
     })
 
     it('should update retrieval method cache from StepTwo', () => {
@@ -648,7 +682,7 @@ describe('DatasetUpdateForm', () => {
 
       // Assert - Go to step 3 and verify
       fireEvent.click(screen.getByTestId('step-two-next'))
-      expect(screen.getByTestId('step-three-retrieval-method')).toHaveTextContent('semantic_search')
+      expect(screen.getByTestId('step-three-retrieval-method'))!.toHaveTextContent('semantic_search')
     })
 
     it('should update result cache from StepTwo', () => {
@@ -673,6 +707,37 @@ describe('DatasetUpdateForm', () => {
       fireEvent.click(screen.getByTestId('step-one-next'))
 
       // Assert - StepTwo should not render due to condition
+      // Assert - StepTwo should not render due to condition
+      // Assert - StepTwo should not render due to condition
+      // Assert - StepTwo should not render due to condition
+      // Assert - StepTwo should not render due to condition
+      // Assert - StepTwo should not render due to condition
+      // Assert - StepTwo should not render due to condition
+      // Assert - StepTwo should not render due to condition
+      // Assert - StepTwo should not render due to condition
+      // Assert - StepTwo should not render due to condition
+      // Assert - StepTwo should not render due to condition
+      // Assert - StepTwo should not render due to condition
+      // Assert - StepTwo should not render due to condition
+      // Assert - StepTwo should not render due to condition
+      // Assert - StepTwo should not render due to condition
+      // Assert - StepTwo should not render due to condition
+      // Assert - StepTwo should not render due to condition
+      // Assert - StepTwo should not render due to condition
+      // Assert - StepTwo should not render due to condition
+      // Assert - StepTwo should not render due to condition
+      // Assert - StepTwo should not render due to condition
+      // Assert - StepTwo should not render due to condition
+      // Assert - StepTwo should not render due to condition
+      // Assert - StepTwo should not render due to condition
+      // Assert - StepTwo should not render due to condition
+      // Assert - StepTwo should not render due to condition
+      // Assert - StepTwo should not render due to condition
+      // Assert - StepTwo should not render due to condition
+      // Assert - StepTwo should not render due to condition
+      // Assert - StepTwo should not render due to condition
+      // Assert - StepTwo should not render due to condition
+      // Assert - StepTwo should not render due to condition
       expect(screen.queryByTestId('step-two')).not.toBeInTheDocument()
     })
 
@@ -682,7 +747,7 @@ describe('DatasetUpdateForm', () => {
 
       fireEvent.click(screen.getByTestId('step-one-next'))
 
-      expect(screen.getByTestId('step-two')).toBeInTheDocument()
+      expect(screen.getByTestId('step-two'))!.toBeInTheDocument()
     })
 
     it('should pass indexingType from datasetDetail to StepTwo', () => {
@@ -706,7 +771,7 @@ describe('DatasetUpdateForm', () => {
       fireEvent.click(screen.getByTestId('step-one-next'))
       fireEvent.click(screen.getByTestId('step-two-next'))
 
-      expect(screen.getByTestId('step-three-dataset-id')).toHaveTextContent('dataset-456')
+      expect(screen.getByTestId('step-three-dataset-id'))!.toHaveTextContent('dataset-456')
     })
 
     it('should pass datasetName from datasetDetail to StepThree', () => {
@@ -716,7 +781,7 @@ describe('DatasetUpdateForm', () => {
       fireEvent.click(screen.getByTestId('step-one-next'))
       fireEvent.click(screen.getByTestId('step-two-next'))
 
-      expect(screen.getByTestId('step-three-dataset-name')).toHaveTextContent('My Special Dataset')
+      expect(screen.getByTestId('step-three-dataset-name'))!.toHaveTextContent('My Special Dataset')
     })
 
     it('should use cached indexing type when datasetDetail indexing_technique is not available', () => {
@@ -729,7 +794,7 @@ describe('DatasetUpdateForm', () => {
       // Act - Navigate to step 3
       fireEvent.click(screen.getByTestId('step-two-next'))
 
-      expect(screen.getByTestId('step-three-indexing-type')).toHaveTextContent('high_quality')
+      expect(screen.getByTestId('step-three-indexing-type'))!.toHaveTextContent('high_quality')
     })
 
     it('should use datasetDetail indexing_technique over cached value', () => {
@@ -744,7 +809,8 @@ describe('DatasetUpdateForm', () => {
       fireEvent.click(screen.getByTestId('step-two-next'))
 
       // Assert - Should use datasetDetail value, not cache
-      expect(screen.getByTestId('step-three-indexing-type')).toHaveTextContent('economy')
+      // Assert - Should use datasetDetail value, not cache
+      expect(screen.getByTestId('step-three-indexing-type'))!.toHaveTextContent('economy')
     })
 
     it('should use retrieval method from datasetDetail when available', () => {
@@ -758,7 +824,7 @@ describe('DatasetUpdateForm', () => {
       fireEvent.click(screen.getByTestId('step-one-next'))
       fireEvent.click(screen.getByTestId('step-two-next'))
 
-      expect(screen.getByTestId('step-three-retrieval-method')).toHaveTextContent('full_text_search')
+      expect(screen.getByTestId('step-three-retrieval-method'))!.toHaveTextContent('full_text_search')
     })
   })
 
@@ -833,7 +899,8 @@ describe('DatasetUpdateForm', () => {
       fireEvent.click(screen.getByTestId('step-two-next'))
 
       // Assert - Should use cached value
-      expect(screen.getByTestId('step-three-retrieval-method')).toHaveTextContent('semantic_search')
+      // Assert - Should use cached value
+      expect(screen.getByTestId('step-three-retrieval-method'))!.toHaveTextContent('semantic_search')
     })
 
     it('should handle step state correctly after multiple navigations', () => {
@@ -845,8 +912,8 @@ describe('DatasetUpdateForm', () => {
       fireEvent.click(screen.getByTestId('step-one-next')) // to step 2
       fireEvent.click(screen.getByTestId('step-two-next')) // to step 3
 
-      expect(screen.getByTestId('step-three')).toBeInTheDocument()
-      expect(screen.getByTestId('top-bar-active-index')).toHaveTextContent('2')
+      expect(screen.getByTestId('step-three'))!.toBeInTheDocument()
+      expect(screen.getByTestId('top-bar-active-index'))!.toHaveTextContent('2')
     })
 
     it('should handle result cache being undefined', () => {
@@ -887,9 +954,10 @@ describe('DatasetUpdateForm', () => {
       fireEvent.click(screen.getByTestId('step-two-prev'))
 
       // Assert - All state should be preserved
-      expect(screen.getByTestId('step-one-data-source-type')).toHaveTextContent(DataSourceType.NOTION)
-      expect(screen.getByTestId('step-one-files-count')).toHaveTextContent('1')
-      expect(screen.getByTestId('step-one-notion-pages-count')).toHaveTextContent('1')
+      // Assert - All state should be preserved
+      expect(screen.getByTestId('step-one-data-source-type'))!.toHaveTextContent(DataSourceType.NOTION)
+      expect(screen.getByTestId('step-one-files-count'))!.toHaveTextContent('1')
+      expect(screen.getByTestId('step-one-notion-pages-count'))!.toHaveTextContent('1')
     })
   })
 
@@ -909,8 +977,9 @@ describe('DatasetUpdateForm', () => {
       fireEvent.click(screen.getByTestId('step-two-next'))
 
       // Assert - All data flows through to Step 3
-      expect(screen.getByTestId('step-three-indexing-type')).toHaveTextContent('high_quality')
-      expect(screen.getByTestId('step-three-retrieval-method')).toHaveTextContent('semantic_search')
+      // Assert - All data flows through to Step 3
+      expect(screen.getByTestId('step-three-indexing-type'))!.toHaveTextContent('high_quality')
+      expect(screen.getByTestId('step-three-retrieval-method'))!.toHaveTextContent('semantic_search')
       expect(stepThreeProps.creationCache?.batch).toBe('batch-1')
     })
 
@@ -970,8 +1039,9 @@ describe('DatasetUpdateForm', () => {
       fireEvent.click(screen.getByTestId('step-two-next'))
 
       // Assert - Step 3 should show dataset details
-      expect(screen.getByTestId('step-three-dataset-name')).toHaveTextContent('Existing Dataset')
-      expect(screen.getByTestId('step-three-indexing-type')).toHaveTextContent('high_quality')
+      // Assert - Step 3 should show dataset details
+      expect(screen.getByTestId('step-three-dataset-name'))!.toHaveTextContent('Existing Dataset')
+      expect(screen.getByTestId('step-three-indexing-type'))!.toHaveTextContent('high_quality')
     })
   })
 
@@ -1014,7 +1084,7 @@ describe('DatasetUpdateForm', () => {
       render(<DatasetUpdateForm />)
 
       const errorElement = screen.getByText('datasetCreation.error.unavailable')
-      expect(errorElement).toBeInTheDocument()
+      expect(errorElement)!.toBeInTheDocument()
     })
 
     it('should not render steps when in error state', () => {
@@ -1033,7 +1103,8 @@ describe('DatasetUpdateForm', () => {
       render(<DatasetUpdateForm />)
 
       // Assert - Error state renders AppUnavailable, not the normal layout
-      expect(screen.getByText('500')).toBeInTheDocument()
+      // Assert - Error state renders AppUnavailable, not the normal layout
+      expect(screen.getByText('500'))!.toBeInTheDocument()
       expect(screen.queryByTestId('top-bar')).not.toBeInTheDocument()
     })
   })
@@ -1053,13 +1124,44 @@ describe('DatasetUpdateForm', () => {
 
       render(<DatasetUpdateForm />)
 
-      expect(screen.getByTestId('top-bar')).toBeInTheDocument()
+      expect(screen.getByTestId('top-bar'))!.toBeInTheDocument()
     })
 
     it('should render StepOne after loading completes', async () => {
       mockIsLoadingDataSourceList = true
       const { rerender } = render(<DatasetUpdateForm />)
 
+      // Assert - Initially not rendered
+      // Assert - Initially not rendered
+      // Assert - Initially not rendered
+      // Assert - Initially not rendered
+      // Assert - Initially not rendered
+      // Assert - Initially not rendered
+      // Assert - Initially not rendered
+      // Assert - Initially not rendered
+      // Assert - Initially not rendered
+      // Assert - Initially not rendered
+      // Assert - Initially not rendered
+      // Assert - Initially not rendered
+      // Assert - Initially not rendered
+      // Assert - Initially not rendered
+      // Assert - Initially not rendered
+      // Assert - Initially not rendered
+      // Assert - Initially not rendered
+      // Assert - Initially not rendered
+      // Assert - Initially not rendered
+      // Assert - Initially not rendered
+      // Assert - Initially not rendered
+      // Assert - Initially not rendered
+      // Assert - Initially not rendered
+      // Assert - Initially not rendered
+      // Assert - Initially not rendered
+      // Assert - Initially not rendered
+      // Assert - Initially not rendered
+      // Assert - Initially not rendered
+      // Assert - Initially not rendered
+      // Assert - Initially not rendered
+      // Assert - Initially not rendered
       // Assert - Initially not rendered
       expect(screen.queryByTestId('step-one')).not.toBeInTheDocument()
 
@@ -1069,7 +1171,7 @@ describe('DatasetUpdateForm', () => {
 
       // Assert - Now rendered
       await waitFor(() => {
-        expect(screen.getByTestId('step-one')).toBeInTheDocument()
+        expect(screen.getByTestId('step-one'))!.toBeInTheDocument()
       })
     })
   })

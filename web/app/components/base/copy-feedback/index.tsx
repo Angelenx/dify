@@ -1,4 +1,5 @@
 'use client'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@langgenius/dify-ui/tooltip'
 import {
   RiClipboardFill,
   RiClipboardLine,
@@ -9,14 +10,13 @@ import {
 } from 'react'
 import { useTranslation } from 'react-i18next'
 import ActionButton from '@/app/components/base/action-button'
-import Tooltip from '@/app/components/base/tooltip'
 import { writeTextToClipboard } from '@/utils/clipboard'
 import copyStyle from './style.module.css'
 
-type Props = {
+type Props = Readonly<{
   content: string
   className?: string
-}
+}>
 
 const prefixEmbedded = 'overview.appInfo.embedded'
 
@@ -46,18 +46,18 @@ const CopyFeedback = ({ content }: Props) => {
   const safeText = tooltipText || ''
 
   return (
-    <Tooltip
-      popupContent={safeText}
-    >
-      <ActionButton>
-        <div
-          onClick={handleCopy}
-          onMouseLeave={handleMouseLeave}
-        >
-          {copied && <RiClipboardFill className="h-4 w-4" />}
-          {!copied && <RiClipboardLine className="h-4 w-4" />}
-        </div>
-      </ActionButton>
+    <Tooltip>
+      <TooltipTrigger
+        render={(
+          <ActionButton aria-label={safeText} onClick={handleCopy} onMouseLeave={handleMouseLeave}>
+            {copied && <RiClipboardFill className="size-4" aria-hidden="true" />}
+            {!copied && <RiClipboardLine className="size-4" aria-hidden="true" />}
+          </ActionButton>
+        )}
+      />
+      <TooltipContent>
+        {safeText}
+      </TooltipContent>
     </Tooltip>
   )
 }
@@ -90,19 +90,26 @@ export const CopyFeedbackNew = ({ content, className }: Pick<Props, 'className' 
   const safeText = tooltipText || ''
 
   return (
-    <Tooltip
-      popupContent={safeText}
-    >
-      <div
-        className={`h-8 w-8 cursor-pointer rounded-lg hover:bg-components-button-ghost-bg-hover ${className ?? ''}`}
-      >
-        <div
-          onClick={handleCopy}
-          onMouseLeave={handleMouseLeave}
-          className={`h-full w-full ${copyStyle.copyIcon} ${copied ? copyStyle.copied : ''}`}
-        >
-        </div>
-      </div>
+    <Tooltip>
+      <TooltipTrigger
+        render={(
+          <button
+            type="button"
+            aria-label={safeText}
+            className={`size-8 cursor-pointer rounded-lg border-none bg-transparent p-0 hover:bg-components-button-ghost-bg-hover focus-visible:ring-1 focus-visible:ring-components-input-border-active focus-visible:outline-hidden ${className ?? ''}`}
+            onClick={handleCopy}
+            onMouseLeave={handleMouseLeave}
+          >
+            <div
+              className={`size-full ${copyStyle.copyIcon} ${copied ? copyStyle.copied : ''}`}
+            >
+            </div>
+          </button>
+        )}
+      />
+      <TooltipContent>
+        {safeText}
+      </TooltipContent>
     </Tooltip>
   )
 }

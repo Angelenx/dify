@@ -1,33 +1,39 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import { usePathname, useRouter } from 'next/navigation'
-import { useEffect } from 'react'
+import { useQuery, useSuspenseQuery } from '@tanstack/react-query'
 import Loading from '@/app/components/base/loading'
-import { useAppContext } from '@/context/app-context'
+import { systemFeaturesQueryOptions } from '@/features/system-features/client'
+import { redirect, usePathname } from '@/next/navigation'
+import { consoleQuery } from '@/service/client'
 
-const datasetOperatorRedirectRoutes = ['/apps', '/app', '/explore', '/tools'] as const
+const datasetOperatorRedirectRoutes = ['/', '/apps', '/app', '/deployments', '/snippets', '/explore', '/tools', '/integrations'] as const
 
-const isPathUnderRoute = (pathname: string, route: string) => pathname === route || pathname.startsWith(`${route}/`)
+function isPathUnderRoute(pathname: string, route: string) {
+  return pathname === route || pathname.startsWith(`${route}/`)
+}
 
-export default function RoleRouteGuard({ children }: { children: ReactNode }) {
-  const { isCurrentWorkspaceDatasetOperator, isLoadingCurrentWorkspace } = useAppContext()
+export function RoleRouteGuard({ children }: { children: ReactNode }) {
+  const currentWorkspaceRoleQuery = useQuery(consoleQuery.workspaces.current.post.queryOptions({
+    select: workspace => workspace.role,
+  }))
+  const { data: systemFeatures } = useSuspenseQuery(systemFeaturesQueryOptions())
   const pathname = usePathname()
-  const router = useRouter()
   const shouldGuardRoute = datasetOperatorRedirectRoutes.some(route => isPathUnderRoute(pathname, route))
-  const shouldRedirect = shouldGuardRoute && !isLoadingCurrentWorkspace && isCurrentWorkspaceDatasetOperator
-
-  useEffect(() => {
-    if (shouldRedirect)
-      router.replace('/datasets')
-  }, [shouldRedirect, router])
+  const shouldRedirectDatasetOperator = shouldGuardRoute
+    && !currentWorkspaceRoleQuery.isPending
+    && currentWorkspaceRoleQuery.data === 'dataset_operator'
+  const shouldRedirectAppDeploy = isPathUnderRoute(pathname, '/deployments') && !systemFeatures.enable_app_deploy
 
   // Block rendering only for guarded routes to avoid permission flicker.
-  if (shouldGuardRoute && isLoadingCurrentWorkspace)
+  if (shouldGuardRoute && currentWorkspaceRoleQuery.isPending)
     return <Loading type="app" />
 
-  if (shouldRedirect)
-    return null
+  if (shouldRedirectAppDeploy)
+    redirect('/apps')
+
+  if (shouldRedirectDatasetOperator)
+    redirect('/datasets')
 
   return <>{children}</>
 }

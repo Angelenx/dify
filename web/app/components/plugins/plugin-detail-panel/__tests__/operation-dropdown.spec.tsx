@@ -1,41 +1,41 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import type { ReactElement, ReactNode } from 'react'
+import { fireEvent, screen } from '@testing-library/react'
+import { cloneElement } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { renderWithSystemFeatures } from '@/__tests__/utils/mock-system-features'
 import { PluginSource } from '../../types'
 import OperationDropdown from '../operation-dropdown'
 
-vi.mock('@/context/global-public-context', () => ({
-  useGlobalPublicStore: <T,>(selector: (state: { systemFeatures: { enable_marketplace: boolean } }) => T): T =>
-    selector({ systemFeatures: { enable_marketplace: true } }),
-}))
+const render = (ui: ReactElement) =>
+  renderWithSystemFeatures(ui, { systemFeatures: { enable_marketplace: true } })
 
-vi.mock('@/utils/classnames', () => ({
+vi.mock('@langgenius/dify-ui/cn', () => ({
   cn: (...args: (string | undefined | false | null)[]) => args.filter(Boolean).join(' '),
 }))
 
-vi.mock('@/app/components/base/action-button', () => ({
-  default: ({ children, className, onClick }: { children: React.ReactNode, className?: string, onClick?: () => void }) => (
-    <button data-testid="action-button" className={className} onClick={onClick}>
-      {children}
-    </button>
+vi.mock('@langgenius/dify-ui/dropdown-menu', () => ({
+  DropdownMenu: ({ children, open }: { children: ReactNode, open: boolean }) => (
+    <div data-testid="dropdown-menu" data-open={open}>{children}</div>
   ),
-}))
-
-vi.mock('@/app/components/base/portal-to-follow-elem', () => ({
-  PortalToFollowElem: ({ children, open }: { children: React.ReactNode, open: boolean }) => (
-    <div data-testid="portal-elem" data-open={open}>{children}</div>
+  DropdownMenuTrigger: ({ children, className }: { children: ReactNode, className?: string }) => (
+    <button data-testid="dropdown-trigger" className={className}>{children}</button>
   ),
-  PortalToFollowElemTrigger: ({ children, onClick }: { children: React.ReactNode, onClick: () => void }) => (
-    <div data-testid="portal-trigger" onClick={onClick}>{children}</div>
+  DropdownMenuContent: ({ children, popupClassName }: { children: ReactNode, popupClassName?: string }) => (
+    <div data-testid="dropdown-content" className={popupClassName}>{children}</div>
   ),
-  PortalToFollowElemContent: ({ children, className }: { children: React.ReactNode, className?: string }) => (
-    <div data-testid="portal-content" className={className}>{children}</div>
-  ),
+  DropdownMenuItem: ({ children, className, onClick, render, variant }: { children: ReactNode, className?: string, onClick?: () => void, render?: ReactElement, variant?: string }) => {
+    if (render)
+      return cloneElement(render, { className, onClick, 'data-variant': variant } as Record<string, unknown>, children)
+    return <div data-testid="dropdown-item" className={className} data-variant={variant} onClick={onClick}>{children}</div>
+  },
+  DropdownMenuSeparator: ({ className }: { className?: string }) => <hr data-testid="dropdown-separator" className={className} />,
 }))
 
 describe('OperationDropdown', () => {
   const mockOnInfo = vi.fn()
   const mockOnCheckVersion = vi.fn()
   const mockOnRemove = vi.fn()
+  const mockOnViewReadme = vi.fn()
   const defaultProps = {
     source: PluginSource.github,
     detailUrl: 'https://github.com/test/repo',
@@ -52,14 +52,22 @@ describe('OperationDropdown', () => {
     it('should render trigger button', () => {
       render(<OperationDropdown {...defaultProps} />)
 
-      expect(screen.getByTestId('portal-trigger')).toBeInTheDocument()
-      expect(screen.getByTestId('action-button')).toBeInTheDocument()
+      expect(screen.getByTestId('dropdown-trigger')).toBeInTheDocument()
     })
 
     it('should render dropdown content', () => {
       render(<OperationDropdown {...defaultProps} />)
 
-      expect(screen.getByTestId('portal-content')).toBeInTheDocument()
+      expect(screen.getByTestId('dropdown-content')).toBeInTheDocument()
+    })
+
+    it('should render figma-aligned dropdown surface and rows', () => {
+      render(<OperationDropdown {...defaultProps} />)
+
+      expect(screen.getByTestId('dropdown-content')).toHaveClass('w-[192px]', 'py-1')
+      expect(screen.getByText('plugin.detailPanel.operation.viewDetail').closest('a')).toHaveClass('px-2', 'py-1', 'system-md-regular')
+      expect(screen.getByText('plugin.detailPanel.operation.remove').closest('[data-testid="dropdown-item"]')).toHaveClass('px-2', 'py-1', 'system-md-regular')
+      expect(screen.getByTestId('dropdown-separator')).toHaveClass('my-0')
     })
 
     it('should render info option for github source', () => {
@@ -86,10 +94,46 @@ describe('OperationDropdown', () => {
       expect(screen.getByText('plugin.detailPanel.operation.viewDetail')).toBeInTheDocument()
     })
 
+    it('should render view README option when provided', () => {
+      render(<OperationDropdown {...defaultProps} onViewReadme={mockOnViewReadme} />)
+
+      expect(screen.getByText('plugin.detailPanel.operation.viewReadme')).toBeInTheDocument()
+    })
+
+    it('should render view README below view marketplace', () => {
+      render(<OperationDropdown {...defaultProps} onViewReadme={mockOnViewReadme} source={PluginSource.marketplace} />)
+
+      const viewMarketplace = screen.getByText('plugin.detailPanel.operation.viewDetail').closest('a')!
+      const viewReadme = screen.getByText('plugin.detailPanel.operation.viewReadme').closest('[data-testid="dropdown-item"]')!
+
+      expect(viewMarketplace.compareDocumentPosition(viewReadme)).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
+    })
+
+    it('should not render view README option when it is unavailable', () => {
+      render(<OperationDropdown {...defaultProps} />)
+
+      expect(screen.queryByText('plugin.detailPanel.operation.viewReadme')).not.toBeInTheDocument()
+    })
+
     it('should always render remove option', () => {
       render(<OperationDropdown {...defaultProps} />)
 
       expect(screen.getByText('plugin.detailPanel.operation.remove')).toBeInTheDocument()
+    })
+
+    it('should render remove option with normal text color', () => {
+      render(<OperationDropdown {...defaultProps} />)
+
+      expect(screen.getByText('plugin.detailPanel.operation.remove').closest('[data-testid="dropdown-item"]')).not.toHaveAttribute('data-variant', 'destructive')
+    })
+
+    it('should render destructive hover styles for remove option when requested', () => {
+      render(<OperationDropdown {...defaultProps} destructiveRemove />)
+
+      expect(screen.getByText('plugin.detailPanel.operation.remove').closest('[data-testid="dropdown-item"]')).toHaveClass(
+        'data-highlighted:bg-state-destructive-hover',
+        'data-highlighted:text-text-destructive',
+      )
     })
 
     it('should not render info option for marketplace source', () => {
@@ -118,14 +162,10 @@ describe('OperationDropdown', () => {
   })
 
   describe('User Interactions', () => {
-    it('should toggle dropdown when trigger is clicked', () => {
+    it('should render dropdown menu root', () => {
       render(<OperationDropdown {...defaultProps} />)
 
-      const trigger = screen.getByTestId('portal-trigger')
-      fireEvent.click(trigger)
-
-      // The portal-elem should reflect the open state
-      expect(screen.getByTestId('portal-elem')).toBeInTheDocument()
+      expect(screen.getByTestId('dropdown-menu')).toBeInTheDocument()
     })
 
     it('should call onInfo when info option is clicked', () => {
@@ -152,6 +192,14 @@ describe('OperationDropdown', () => {
       expect(mockOnRemove).toHaveBeenCalledTimes(1)
     })
 
+    it('should call onViewReadme when view README option is clicked', () => {
+      render(<OperationDropdown {...defaultProps} onViewReadme={mockOnViewReadme} />)
+
+      fireEvent.click(screen.getByText('plugin.detailPanel.operation.viewReadme'))
+
+      expect(mockOnViewReadme).toHaveBeenCalledTimes(1)
+    })
+
     it('should have correct href for view detail link', () => {
       render(<OperationDropdown {...defaultProps} source={PluginSource.github} />)
 
@@ -174,7 +222,7 @@ describe('OperationDropdown', () => {
         const { unmount } = render(
           <OperationDropdown {...defaultProps} source={source} />,
         )
-        expect(screen.getByTestId('portal-elem')).toBeInTheDocument()
+        expect(screen.getByTestId('dropdown-menu')).toBeInTheDocument()
         expect(screen.getByText('plugin.detailPanel.operation.remove')).toBeInTheDocument()
         unmount()
       })
@@ -199,9 +247,7 @@ describe('OperationDropdown', () => {
 
   describe('Memoization', () => {
     it('should be wrapped with React.memo', () => {
-      // Verify the component is exported as a memo component
       expect(OperationDropdown).toBeDefined()
-      // React.memo wraps the component, so it should have $$typeof
       expect((OperationDropdown as { $$typeof?: symbol }).$$typeof).toBeDefined()
     })
   })

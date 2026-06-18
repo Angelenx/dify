@@ -2,29 +2,12 @@ import type { PluginDetail } from '../../../../types'
 import type { ModalStates, VersionTarget } from '../../hooks'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { expectLoadingButton } from '@/test/button'
 import { PluginSource } from '../../../../types'
 import HeaderModals from '../header-modals'
 
 vi.mock('@/context/i18n', () => ({
   useGetLanguage: () => 'en_US',
-}))
-
-vi.mock('@/app/components/base/confirm', () => ({
-  default: ({ isShow, title, onCancel, onConfirm, isLoading }: {
-    isShow: boolean
-    title: string
-    onCancel: () => void
-    onConfirm: () => void
-    isLoading: boolean
-  }) => isShow
-    ? (
-        <div data-testid="delete-confirm">
-          <div data-testid="delete-title">{title}</div>
-          <button data-testid="confirm-cancel" onClick={onCancel}>Cancel</button>
-          <button data-testid="confirm-ok" onClick={onConfirm} disabled={isLoading}>Confirm</button>
-        </div>
-      )
-    : null,
 }))
 
 vi.mock('@/app/components/plugins/plugin-page/plugin-info', () => ({
@@ -230,7 +213,7 @@ describe('HeaderModals', () => {
         />,
       )
 
-      expect(screen.queryByTestId('delete-confirm')).not.toBeInTheDocument()
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
     })
 
     it('should render delete confirm when isShowDeleteConfirm is true', () => {
@@ -247,7 +230,7 @@ describe('HeaderModals', () => {
         />,
       )
 
-      expect(screen.getByTestId('delete-confirm')).toBeInTheDocument()
+      expect(screen.getByRole('alertdialog')).toBeInTheDocument()
     })
 
     it('should show correct delete title', () => {
@@ -264,7 +247,7 @@ describe('HeaderModals', () => {
         />,
       )
 
-      expect(screen.getByTestId('delete-title')).toHaveTextContent('plugin.action.delete')
+      expect(screen.getByRole('alertdialog')).toHaveTextContent('plugin.action.delete')
     })
 
     it('should call hideDeleteConfirm when cancel is clicked', () => {
@@ -281,7 +264,7 @@ describe('HeaderModals', () => {
         />,
       )
 
-      fireEvent.click(screen.getByTestId('confirm-cancel'))
+      fireEvent.click(screen.getByRole('button', { name: 'common.operation.cancel' }))
 
       expect(modalStates.hideDeleteConfirm).toHaveBeenCalled()
     })
@@ -300,7 +283,7 @@ describe('HeaderModals', () => {
         />,
       )
 
-      fireEvent.click(screen.getByTestId('confirm-ok'))
+      fireEvent.click(screen.getByRole('button', { name: 'common.operation.confirm' }))
 
       expect(mockOnDelete).toHaveBeenCalled()
     })
@@ -319,7 +302,7 @@ describe('HeaderModals', () => {
         />,
       )
 
-      expect(screen.getByTestId('confirm-ok')).toBeDisabled()
+      expectLoadingButton(screen.getByRole('button', { name: /common\.operation\.confirm/ }))
     })
   })
 
@@ -485,7 +468,7 @@ describe('HeaderModals', () => {
       )
 
       expect(screen.getByTestId('plugin-info')).toBeInTheDocument()
-      expect(screen.getByTestId('delete-confirm')).toBeInTheDocument()
+      expect(screen.getByRole('alertdialog')).toBeInTheDocument()
       expect(screen.getByTestId('update-modal')).toBeInTheDocument()
     })
   })

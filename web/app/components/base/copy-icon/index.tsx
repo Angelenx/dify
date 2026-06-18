@@ -1,15 +1,15 @@
 'use client'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@langgenius/dify-ui/tooltip'
 import {
   useCallback,
   useState,
 } from 'react'
 import { useTranslation } from 'react-i18next'
 import { writeTextToClipboard } from '@/utils/clipboard'
-import Tooltip from '../tooltip'
 
-type Props = {
+type Props = Readonly<{
   content: string
-}
+}>
 
 const prefixEmbedded = 'overview.appInfo.embedded'
 
@@ -39,14 +39,26 @@ const CopyIcon = ({ content }: Props) => {
   const safeTooltipText = tooltipText || ''
 
   return (
-    <Tooltip
-      popupContent={safeTooltipText}
-    >
-      <div onMouseLeave={handleMouseLeave}>
-        {!copied
-          ? (<span className="i-custom-vender-line-files-copy mx-1 h-3.5 w-3.5 cursor-pointer text-text-tertiary" onClick={handleCopy} data-testid="copy-icon" />)
-          : (<span className="i-custom-vender-line-files-copy-check mx-1 h-3.5 w-3.5 text-text-tertiary" data-testid="copied-icon" />)}
-      </div>
+    <Tooltip>
+      <TooltipTrigger
+        render={(
+          <button
+            type="button"
+            aria-label={safeTooltipText}
+            className="mx-1 inline-flex size-3.5 cursor-pointer border-0 bg-transparent p-0 text-text-tertiary"
+            onClick={handleCopy}
+            onMouseLeave={handleMouseLeave}
+            data-testid="copy-icon"
+          >
+            {!copied
+              ? (<span aria-hidden className="i-custom-vender-line-files-copy size-3.5" />)
+              : (<span aria-hidden className="i-custom-vender-line-files-copy-check size-3.5" />)}
+          </button>
+        )}
+      />
+      <TooltipContent>
+        {safeTooltipText}
+      </TooltipContent>
     </Tooltip>
   )
 }

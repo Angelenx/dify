@@ -6,10 +6,10 @@ import type { Collection } from '@/app/components/tools/types'
  * Input (search), and card rendering. Verifies that tab switching, keyword
  * filtering, and label filtering work together correctly.
  */
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { createSystemFeaturesWrapper } from '@/__tests__/utils/mock-system-features'
 import { CollectionType } from '@/app/components/tools/types'
 
 // ---- Mocks ----
@@ -35,10 +35,6 @@ vi.mock('nuqs', async (importOriginal) => {
     useQueryState: () => ['builtin', vi.fn()],
   }
 })
-
-vi.mock('@/context/global-public-context', () => ({
-  useGlobalPublicStore: () => ({ enable_marketplace: false }),
-}))
 
 vi.mock('@/app/components/plugins/hooks', () => ({
   useTags: () => ({
@@ -133,30 +129,6 @@ vi.mock('@/app/components/base/tab-slider-new', () => ({
   ),
 }))
 
-vi.mock('@/app/components/base/input', () => ({
-  default: ({ value, onChange, onClear, showLeftIcon, showClearIcon, wrapperClassName }: {
-    value: string
-    onChange: (e: { target: { value: string } }) => void
-    onClear: () => void
-    showLeftIcon?: boolean
-    showClearIcon?: boolean
-    wrapperClassName?: string
-  }) => (
-    <div data-testid="search-input-wrapper" className={wrapperClassName}>
-      <input
-        data-testid="search-input"
-        value={value}
-        onChange={onChange}
-        data-left-icon={showLeftIcon ? 'true' : 'false'}
-        data-clear-icon={showClearIcon ? 'true' : 'false'}
-      />
-      {showClearIcon && value && (
-        <button data-testid="clear-search" onClick={onClear}>Clear</button>
-      )}
-    </div>
-  ),
-}))
-
 vi.mock('@/app/components/plugins/card', () => ({
   default: ({ payload, className }: { payload: { brief: Record<string, string> | string, name: string }, className?: string }) => {
     const briefText = typeof payload.brief === 'object' ? payload.brief?.en_US || '' : payload.brief
@@ -226,7 +198,7 @@ vi.mock('@/app/components/tools/mcp', () => ({
   default: () => <div data-testid="mcp-list">MCP List</div>,
 }))
 
-vi.mock('@/utils/classnames', () => ({
+vi.mock('@langgenius/dify-ui/cn', () => ({
   cn: (...args: unknown[]) => args.filter(Boolean).join(' '),
 }))
 
@@ -234,15 +206,13 @@ vi.mock('@/app/components/workflow/block-selector/types', () => ({
   ToolTypeEnum: { BuiltIn: 'builtin', Custom: 'api', Workflow: 'workflow', MCP: 'mcp' },
 }))
 
-const { default: ProviderList } = await import('@/app/components/tools/provider-list')
+const { default: ProviderList } = await import('@/app/components/integrations/tool-provider-list')
 
 const createWrapper = () => {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
+  const { wrapper } = createSystemFeaturesWrapper({
+    systemFeatures: { enable_marketplace: false },
   })
-  return ({ children }: { children: React.ReactNode }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-  )
+  return wrapper
 }
 
 describe('Tool Browsing & Filtering Integration', () => {
@@ -269,7 +239,7 @@ describe('Tool Browsing & Filtering Integration', () => {
   it('filters tools by keyword search', async () => {
     render(<ProviderList />, { wrapper: createWrapper() })
 
-    const searchInput = screen.getByTestId('search-input')
+    const searchInput = screen.getByPlaceholderText('operation.search')
     fireEvent.change(searchInput, { target: { value: 'Google' } })
 
     await waitFor(() => {
@@ -281,7 +251,7 @@ describe('Tool Browsing & Filtering Integration', () => {
   it('clears search keyword and shows all tools again', async () => {
     render(<ProviderList />, { wrapper: createWrapper() })
 
-    const searchInput = screen.getByTestId('search-input')
+    const searchInput = screen.getByPlaceholderText('operation.search')
     fireEvent.change(searchInput, { target: { value: 'Google' } })
     await waitFor(() => {
       expect(screen.queryByTestId('card-weather_api')).not.toBeInTheDocument()
@@ -329,7 +299,7 @@ describe('Tool Browsing & Filtering Integration', () => {
       expect(screen.getByTestId('card-google_search')).toBeInTheDocument()
     })
 
-    const searchInput = screen.getByTestId('search-input')
+    const searchInput = screen.getByPlaceholderText('operation.search')
     fireEvent.change(searchInput, { target: { value: 'Weather' } })
     await waitFor(() => {
       expect(screen.queryByTestId('card-google_search')).not.toBeInTheDocument()
@@ -374,6 +344,6 @@ describe('Tool Browsing & Filtering Integration', () => {
   it('shows search input on all tabs', () => {
     render(<ProviderList />, { wrapper: createWrapper() })
 
-    expect(screen.getByTestId('search-input')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('operation.search')).toBeInTheDocument()
   })
 })

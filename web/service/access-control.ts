@@ -1,8 +1,7 @@
-import type { AccessControlAccount, AccessControlGroup, AccessMode, Subject } from '@/models/access-control'
-import type { App } from '@/types/app'
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useGlobalPublicStore } from '@/context/global-public-context'
-import { get, post } from './base'
+import type { AccessControlAccount, AccessControlGroup, Subject } from '@/models/access-control'
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
+import { systemFeaturesQueryOptions } from '@/features/system-features/client'
+import { get } from './base'
 import { getUserCanAccess } from './share'
 
 const NAME_SPACE = 'access-control'
@@ -49,33 +48,16 @@ export const useSearchForWhiteListCandidates = (query: { keyword?: string, group
   })
 }
 
-type UpdateAccessModeParams = {
-  appId: App['id']
-  subjects?: Pick<Subject, 'subjectId' | 'subjectType'>[]
-  accessMode: AccessMode
-}
-
-export const useUpdateAccessMode = () => {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationKey: [NAME_SPACE, 'update-access-mode'],
-    mutationFn: (params: UpdateAccessModeParams) => {
-      return post('/enterprise/webapp/app/access-mode', { body: params })
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: [NAME_SPACE, 'app-whitelist-subjects'],
-      })
-    },
-  })
-}
-
 export const useGetUserCanAccessApp = ({ appId, isInstalledApp = true, enabled }: { appId?: string, isInstalledApp?: boolean, enabled?: boolean }) => {
-  const systemFeatures = useGlobalPublicStore(s => s.systemFeatures)
+  // useQuery (not useSuspenseQuery) to keep this service hook's call contract
+  // unchanged from the zustand era: callers should not need a Suspense boundary.
+  // First-fetch undefined is bridged via `?? false` so the inner queryKey is stable.
+  const { data: systemFeatures } = useQuery(systemFeaturesQueryOptions())
+  const webappAuthEnabled = systemFeatures?.webapp_auth.enabled ?? false
   return useQuery({
-    queryKey: [NAME_SPACE, 'user-can-access-app', appId, systemFeatures.webapp_auth.enabled, isInstalledApp],
+    queryKey: [NAME_SPACE, 'user-can-access-app', appId, webappAuthEnabled, isInstalledApp],
     queryFn: () => {
-      if (systemFeatures.webapp_auth.enabled)
+      if (webappAuthEnabled)
         return getUserCanAccess(appId!, isInstalledApp)
       else
         return { result: true }

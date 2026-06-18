@@ -4,7 +4,7 @@ import * as React from 'react'
 import CreateAppCard from '../new-app-card'
 
 const mockReplace = vi.fn()
-vi.mock('next/navigation', () => ({
+vi.mock('@/next/navigation', () => ({
   useRouter: () => ({
     replace: mockReplace,
   }),
@@ -18,7 +18,7 @@ vi.mock('@/context/provider-context', () => ({
   }),
 }))
 
-vi.mock('next/dynamic', () => ({
+vi.mock('@/next/dynamic', () => ({
   default: (importFn: () => Promise<{ default: React.ComponentType }>) => {
     const fnString = importFn.toString()
 
@@ -63,7 +63,7 @@ describe('CreateAppCard', () => {
   describe('Rendering', () => {
     it('should render without crashing', () => {
       render(<CreateAppCard ref={defaultRef} />)
-      expect(screen.getByText('app.createApp')).toBeInTheDocument()
+      expect(screen.getByText('app.newApp.startFromBlank')).toBeInTheDocument()
     })
 
     it('should render three create buttons', () => {
@@ -96,7 +96,7 @@ describe('CreateAppCard', () => {
 
     it('should render with selectedAppType prop', () => {
       render(<CreateAppCard ref={defaultRef} selectedAppType="chat" />)
-      expect(screen.getByText('app.createApp')).toBeInTheDocument()
+      expect(screen.getByText('app.newApp.startFromBlank')).toBeInTheDocument()
     })
   })
 
@@ -222,7 +222,7 @@ describe('CreateAppCard', () => {
       const { container } = render(<CreateAppCard ref={defaultRef} />)
       const card = container.firstChild as HTMLElement
 
-      expect(card).toHaveClass('h-[160px]', 'rounded-xl')
+      expect(card).toHaveClass('h-41.5', 'rounded-xl', 'bg-background-default-dimmed')
     })
 
     it('should have proper button styling', () => {

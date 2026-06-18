@@ -2,9 +2,14 @@ import type { DataSet } from '@/models/datasets'
 import type { RetrievalConfig } from '@/types/app'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { ChunkingMode, DatasetPermission, DataSourceType } from '@/models/datasets'
+import { expectLoadingButton } from '@/test/button'
 import { RETRIEVE_METHOD } from '@/types/app'
 import { IndexingType } from '../../../create/step-two'
 import Form from '../index'
+
+const { mockToastError } = vi.hoisted(() => ({
+  mockToastError: vi.fn(),
+}))
 
 // Mock contexts
 const mockMutateDatasets = vi.fn()
@@ -181,14 +186,51 @@ vi.mock('@/app/components/datasets/common/check-rerank-model', () => ({
   isReRankModelSelected: () => true,
 }))
 
-vi.mock('@/app/components/base/toast', () => ({
-  default: {
-    notify: vi.fn(),
+vi.mock('@langgenius/dify-ui/toast', () => ({
+  toast: {
+    error: mockToastError,
+    success: vi.fn(),
   },
 }))
 
 vi.mock('@/context/i18n', () => ({
   useDocLink: () => (path: string) => `https://docs.dify.ai${path}`,
+}))
+
+vi.mock('../components/indexing-section', () => ({
+  default: ({
+    currentDataset,
+    indexMethod,
+  }: {
+    currentDataset?: DataSet
+    indexMethod?: IndexingType
+  }) => (
+    <div data-testid="indexing-section">
+      {!!currentDataset?.doc_form && (
+        <>
+          <div>form.chunkStructure.title</div>
+          <a href="https://docs.dify.ai/use-dify/knowledge/create-knowledge/chunking-and-cleaning-text">
+            form.chunkStructure.learnMore
+          </a>
+        </>
+      )}
+      {!!(currentDataset
+        && currentDataset.doc_form !== ChunkingMode.parentChild
+        && currentDataset.indexing_technique
+        && indexMethod) && (
+        <div>form.indexMethod</div>
+      )}
+      {indexMethod === IndexingType.QUALIFIED && <div>form.embeddingModel</div>}
+      {currentDataset?.provider !== 'external' && indexMethod && (
+        <>
+          <div>form.retrievalSetting.title</div>
+          <a href="https://docs.dify.ai/use-dify/knowledge/create-knowledge/setting-indexing-methods">
+            form.retrievalSetting.learnMore
+          </a>
+        </>
+      )}
+    </div>
+  ),
 }))
 
 describe('Form', () => {
@@ -340,14 +382,13 @@ describe('Form', () => {
       const saveButton = screen.getByRole('button', { name: /form\.save/i })
       fireEvent.click(saveButton)
 
-      // Button should be disabled during loading
       await waitFor(() => {
-        expect(saveButton).toBeDisabled()
+        expectLoadingButton(saveButton)
       })
     })
 
     it('should show error when trying to save with empty name', async () => {
-      const Toast = await import('@/app/components/base/toast')
+      const { toast } = await import('@langgenius/dify-ui/toast')
       render(<Form />)
 
       // Clear the name
@@ -359,10 +400,7 @@ describe('Form', () => {
       fireEvent.click(saveButton)
 
       await waitFor(() => {
-        expect(Toast.default.notify).toHaveBeenCalledWith({
-          type: 'error',
-          message: expect.any(String),
-        })
+        expect(toast.error).toHaveBeenCalledWith(expect.any(String))
       })
     })
 

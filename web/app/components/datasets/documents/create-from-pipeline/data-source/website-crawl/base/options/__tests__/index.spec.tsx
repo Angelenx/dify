@@ -1,12 +1,26 @@
-import type { MockInstance } from 'vitest'
 import type { RAGPipelineVariables } from '@/models/pipeline'
 import { fireEvent, render, screen } from '@testing-library/react'
 import * as React from 'react'
 import { BaseFieldType } from '@/app/components/base/form/form-scenarios/base/types'
-import Toast from '@/app/components/base/toast'
 import { CrawlStep } from '@/models/datasets'
 import { PipelineInputVarType } from '@/models/pipeline'
+import { expectLoadingButton } from '@/test/button'
 import Options from '../index'
+
+const { mockToastError } = vi.hoisted(() => ({
+  mockToastError: vi.fn(),
+}))
+
+vi.mock('@langgenius/dify-ui/toast', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@langgenius/dify-ui/toast')>()
+  return {
+    ...actual,
+    toast: {
+      ...actual.toast,
+      error: mockToastError,
+    },
+  }
+})
 
 // Mock useInitialData and useConfigurations hooks
 const { mockUseInitialData, mockUseConfigurations } = vi.hoisted(() => ({
@@ -116,13 +130,9 @@ const createDefaultProps = (overrides?: Partial<OptionsProps>): OptionsProps => 
 })
 
 describe('Options', () => {
-  let toastNotifySpy: MockInstance
-
   beforeEach(() => {
     vi.clearAllMocks()
-
-    // Spy on Toast.notify instead of mocking the entire module
-    toastNotifySpy = vi.spyOn(Toast, 'notify').mockImplementation(() => ({ clear: vi.fn() }))
+    mockToastError.mockReset()
 
     // Reset mock form values
     Object.keys(mockFormValues).forEach(key => delete mockFormValues[key])
@@ -130,10 +140,6 @@ describe('Options', () => {
     // Default mock return values - using real generateZodSchema
     mockUseInitialData.mockReturnValue({})
     mockUseConfigurations.mockReturnValue([createMockConfiguration()])
-  })
-
-  afterEach(() => {
-    toastNotifySpy.mockRestore()
   })
 
   describe('Rendering', () => {
@@ -252,12 +258,12 @@ describe('Options', () => {
         expect(screen.getByText(/running/i)).toBeInTheDocument()
       })
 
-      it('should disable button when step is running', () => {
+      it('should keep button loading-disabled when step is running', () => {
         const props = createDefaultProps({ step: CrawlStep.running })
 
         render(<Options {...props} />)
 
-        expect(screen.getByRole('button')).toBeDisabled()
+        expectLoadingButton(screen.getByRole('button'))
       })
 
       it('should enable button when step is finished', () => {
@@ -266,16 +272,6 @@ describe('Options', () => {
         render(<Options {...props} />)
 
         expect(screen.getByRole('button')).not.toBeDisabled()
-      })
-
-      it('should show loading state on button when step is running', () => {
-        const props = createDefaultProps({ step: CrawlStep.running })
-
-        render(<Options {...props} />)
-
-        // Assert - Button should have loading prop which disables it
-        const button = screen.getByRole('button')
-        expect(button).toBeDisabled()
       })
     })
 
@@ -301,7 +297,7 @@ describe('Options', () => {
 
         render(<Options {...props} />)
 
-        expect(screen.getByRole('button')).toBeDisabled()
+        expectLoadingButton(screen.getByRole('button'))
       })
 
       it('should default runDisabled to undefined (falsy)', () => {
@@ -490,9 +486,8 @@ describe('Options', () => {
 
       render(<Options {...props} />)
 
-      // Assert - Button should be in loading state
       const button = screen.getByRole('button')
-      expect(button).toBeDisabled()
+      expectLoadingButton(button)
       expect(screen.getByText(/running/i)).toBeInTheDocument()
     })
 
@@ -638,11 +633,7 @@ describe('Options', () => {
       fireEvent.click(screen.getByRole('button'))
 
       // Assert - Toast should be called with error message
-      expect(toastNotifySpy).toHaveBeenCalledWith(
-        expect.objectContaining({
-          type: 'error',
-        }),
-      )
+      expect(mockToastError).toHaveBeenCalled()
     })
 
     it('should handle validation error and display field name in message', () => {
@@ -660,12 +651,7 @@ describe('Options', () => {
       fireEvent.click(screen.getByRole('button'))
 
       // Assert - Toast message should contain field path
-      expect(toastNotifySpy).toHaveBeenCalledWith(
-        expect.objectContaining({
-          type: 'error',
-          message: expect.stringContaining('email_address'),
-        }),
-      )
+      expect(mockToastError).toHaveBeenCalledWith(expect.stringContaining('email_address'))
     })
 
     it('should handle empty variables gracefully', () => {
@@ -714,12 +700,8 @@ describe('Options', () => {
       fireEvent.click(screen.getByRole('button'))
 
       // Assert - Toast should be called once (only first error)
-      expect(toastNotifySpy).toHaveBeenCalledTimes(1)
-      expect(toastNotifySpy).toHaveBeenCalledWith(
-        expect.objectContaining({
-          type: 'error',
-        }),
-      )
+      expect(mockToastError).toHaveBeenCalledTimes(1)
+      expect(mockToastError).toHaveBeenCalled()
     })
 
     it('should handle validation pass when all required fields have values', () => {
@@ -738,7 +720,7 @@ describe('Options', () => {
       fireEvent.click(screen.getByRole('button'))
 
       // Assert - No toast error, onSubmit called
-      expect(toastNotifySpy).not.toHaveBeenCalled()
+      expect(mockToastError).not.toHaveBeenCalled()
       expect(mockOnSubmit).toHaveBeenCalled()
     })
 
@@ -780,7 +762,9 @@ describe('Options', () => {
       render(<Options {...props} />)
 
       const button = screen.getByRole('button')
-      if (expectedDisabled)
+      if (propVariation.step === CrawlStep.running)
+        expectLoadingButton(button)
+      else if (expectedDisabled)
         expect(button).toBeDisabled()
       else
         expect(button).not.toBeDisabled()
@@ -835,7 +819,7 @@ describe('Options', () => {
       fireEvent.click(screen.getByRole('button'))
 
       expect(mockOnSubmit).toHaveBeenCalled()
-      expect(toastNotifySpy).not.toHaveBeenCalled()
+      expect(mockToastError).not.toHaveBeenCalled()
     })
 
     it('should fail validation with invalid data', () => {
@@ -854,7 +838,7 @@ describe('Options', () => {
       fireEvent.click(screen.getByRole('button'))
 
       expect(mockOnSubmit).not.toHaveBeenCalled()
-      expect(toastNotifySpy).toHaveBeenCalled()
+      expect(mockToastError).toHaveBeenCalled()
     })
 
     it('should show error toast message when validation fails', () => {
@@ -871,12 +855,7 @@ describe('Options', () => {
 
       fireEvent.click(screen.getByRole('button'))
 
-      expect(toastNotifySpy).toHaveBeenCalledWith(
-        expect.objectContaining({
-          type: 'error',
-          message: expect.any(String),
-        }),
-      )
+      expect(mockToastError).toHaveBeenCalledWith(expect.any(String))
     })
   })
 

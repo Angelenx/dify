@@ -6,6 +6,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DatasourceType } from '@/models/pipeline'
 import StepOneContent from '../step-one-content'
 
+vi.mock('@/config', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/config')>()
+  return {
+    ...actual,
+    IS_CLOUD_EDITION: true,
+  }
+})
+
 // Mock context providers and hooks (底层依赖)
 vi.mock('@/context/modal-context', () => ({
   useModalContext: vi.fn(() => ({
@@ -143,7 +151,7 @@ vi.mock('@/service/base', () => ({
   upload: vi.fn().mockResolvedValue({ id: 'uploaded-file-id' }),
 }))
 
-vi.mock('next/navigation', () => ({
+vi.mock('@/next/navigation', () => ({
   useParams: () => ({ datasetId: 'mock-dataset-id' }),
   useRouter: () => ({ push: vi.fn() }),
   usePathname: () => '/datasets/mock-dataset-id',

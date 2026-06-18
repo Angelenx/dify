@@ -13,6 +13,7 @@ import type datasetHitTesting from '../i18n/en-US/dataset-hit-testing.json'
 import type datasetPipeline from '../i18n/en-US/dataset-pipeline.json'
 import type datasetSettings from '../i18n/en-US/dataset-settings.json'
 import type dataset from '../i18n/en-US/dataset.json'
+import type deployments from '../i18n/en-US/deployments.json'
 import type education from '../i18n/en-US/education.json'
 import type explore from '../i18n/en-US/explore.json'
 import type layout from '../i18n/en-US/layout.json'
@@ -25,6 +26,7 @@ import type plugin from '../i18n/en-US/plugin.json'
 import type register from '../i18n/en-US/register.json'
 import type runLog from '../i18n/en-US/run-log.json'
 import type share from '../i18n/en-US/share.json'
+import type snippet from '../i18n/en-US/snippet.json'
 import type time from '../i18n/en-US/time.json'
 import type tools from '../i18n/en-US/tools.json'
 import type workflow from '../i18n/en-US/workflow.json'
@@ -46,6 +48,7 @@ export type Resources = {
   datasetHitTesting: typeof datasetHitTesting
   datasetPipeline: typeof datasetPipeline
   datasetSettings: typeof datasetSettings
+  deployments: typeof deployments
   education: typeof education
   explore: typeof explore
   layout: typeof layout
@@ -58,6 +61,7 @@ export type Resources = {
   register: typeof register
   runLog: typeof runLog
   share: typeof share
+  snippet: typeof snippet
   time: typeof time
   tools: typeof tools
   workflow: typeof workflow
@@ -79,6 +83,7 @@ export const namespaces = [
   'datasetHitTesting',
   'datasetPipeline',
   'datasetSettings',
+  'deployments',
   'education',
   'explore',
   'layout',
@@ -91,6 +96,7 @@ export const namespaces = [
   'register',
   'runLog',
   'share',
+  'snippet',
   'time',
   'tools',
   'workflow',

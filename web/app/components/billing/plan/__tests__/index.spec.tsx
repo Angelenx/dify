@@ -1,15 +1,29 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { EDUCATION_VERIFYING_LOCALSTORAGE_ITEM } from '@/app/education-apply/constants'
+import { fetchSubscriptionUrls } from '@/service/billing'
 import { Plan, SelfHostedPlan } from '../../type'
 import PlanComp from '../index'
+
+const setEducationVerifyingMock = vi.hoisted(() => vi.fn())
+const mockConfig = vi.hoisted(() => ({
+  isCloudEdition: true,
+}))
 
 let currentPath = '/billing'
 
 const push = vi.fn()
+let isCurrentWorkspaceManager = true
+let assignedHref = ''
+const originalLocation = window.location
 
-vi.mock('next/navigation', () => ({
+vi.mock('@/next/navigation', () => ({
   useRouter: () => ({ push }),
   usePathname: () => currentPath,
+}))
+
+vi.mock('@/config', () => ({
+  get IS_CLOUD_EDITION() {
+    return mockConfig.isCloudEdition
+  },
 }))
 
 const setShowAccountSettingModalMock = vi.fn()
@@ -27,9 +41,25 @@ vi.mock('@/context/provider-context', () => ({
 vi.mock('@/context/app-context', () => ({
   useAppContext: () => ({
     userProfile: { email: 'user@example.com' },
-    isCurrentWorkspaceManager: true,
+    isCurrentWorkspaceManager,
   }),
 }))
+
+vi.mock('foxact/use-local-storage', () => ({
+  useSetLocalStorage: () => setEducationVerifyingMock,
+}))
+
+vi.mock('@/service/billing', () => ({
+  fetchSubscriptionUrls: vi.fn(),
+}))
+
+vi.mock('@/service/use-billing', () => ({
+  useCurrentPlanVectorSpace: () => ({
+    data: undefined,
+  }),
+}))
+
+const fetchSubscriptionUrlsMock = vi.mocked(fetchSubscriptionUrls)
 
 const mutateAsyncMock = vi.fn()
 let isPending = false
@@ -78,10 +108,27 @@ describe('PlanComp', () => {
     },
   }
 
+  beforeAll(() => {
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: {
+        get href() {
+          return assignedHref
+        },
+        set href(value: string) {
+          assignedHref = value
+        },
+      } as unknown as Location,
+    })
+  })
+
   beforeEach(() => {
     vi.clearAllMocks()
     currentPath = '/billing'
     isPending = false
+    isCurrentWorkspaceManager = true
+    mockConfig.isCloudEdition = true
+    assignedHref = ''
     providerContextMock.mockReturnValue({
       plan: planMock,
       enableEducationPlan: true,
@@ -90,20 +137,28 @@ describe('PlanComp', () => {
     })
     mutateAsyncMock.mockReset()
     mutateAsyncMock.mockResolvedValue({ token: 'token' })
+    fetchSubscriptionUrlsMock.mockResolvedValue({ url: 'https://subscription.example' })
+  })
+
+  afterAll(() => {
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: originalLocation,
+    })
   })
 
   it('renders plan info and handles education verify success', async () => {
     render(<PlanComp loc="billing-page" />)
 
-    expect(screen.getByText('billing.plans.professional.name')).toBeInTheDocument()
-    expect(screen.getByTestId('plan-upgrade-btn')).toBeInTheDocument()
+    expect(screen.getByText('billing.plans.professional.name'))!.toBeInTheDocument()
+    expect(screen.getByTestId('plan-upgrade-btn'))!.toBeInTheDocument()
 
     const verifyBtn = screen.getByText('education.toVerified')
     fireEvent.click(verifyBtn)
 
     await waitFor(() => expect(mutateAsyncMock).toHaveBeenCalled())
     await waitFor(() => expect(push).toHaveBeenCalledWith('/education-apply?token=token'))
-    expect(localStorage.removeItem).toHaveBeenCalledWith(EDUCATION_VERIFYING_LOCALSTORAGE_ITEM)
+    expect(setEducationVerifyingMock).toHaveBeenCalledWith(null)
   })
 
   it('shows modal when education verify fails', async () => {
@@ -143,7 +198,7 @@ describe('PlanComp', () => {
     })
     render(<PlanComp loc="billing-page" />)
 
-    expect(screen.getByText('billing.plans.sandbox.name')).toBeInTheDocument()
+    expect(screen.getByText('billing.plans.sandbox.name'))!.toBeInTheDocument()
   })
 
   it('renders team plan', () => {
@@ -155,7 +210,7 @@ describe('PlanComp', () => {
     })
     render(<PlanComp loc="billing-page" />)
 
-    expect(screen.getByText('billing.plans.team.name')).toBeInTheDocument()
+    expect(screen.getByText('billing.plans.team.name'))!.toBeInTheDocument()
   })
 
   it('shows verify button when education account is about to expire', () => {
@@ -167,7 +222,50 @@ describe('PlanComp', () => {
     })
     render(<PlanComp loc="billing-page" />)
 
-    expect(screen.getByText('education.toVerified')).toBeInTheDocument()
+    expect(screen.getByText('education.toVerified'))!.toBeInTheDocument()
+  })
+
+  it('shows education discount button and keeps upgrade button for education accounts', async () => {
+    providerContextMock.mockReturnValue({
+      plan: { ...planMock, type: Plan.sandbox },
+      enableEducationPlan: true,
+      allowRefreshEducationVerify: false,
+      isEducationAccount: true,
+    })
+    render(<PlanComp loc="billing-page" />)
+
+    fireEvent.click(screen.getByText('education.useEducationDiscount'))
+
+    await waitFor(() => {
+      expect(fetchSubscriptionUrlsMock).toHaveBeenCalledWith(Plan.professional, 'year')
+      expect(assignedHref).toBe('https://subscription.example')
+    })
+    expect(screen.getByTestId('plan-upgrade-btn'))!.toBeInTheDocument()
+  })
+
+  it('does not show education discount button for non-sandbox education accounts', () => {
+    providerContextMock.mockReturnValue({
+      plan: planMock,
+      enableEducationPlan: true,
+      allowRefreshEducationVerify: false,
+      isEducationAccount: true,
+    })
+    render(<PlanComp loc="billing-page" />)
+
+    expect(screen.queryByText('education.useEducationDiscount')).not.toBeInTheDocument()
+  })
+
+  it('does not show education discount button for non-manager sandbox education accounts', () => {
+    isCurrentWorkspaceManager = false
+    providerContextMock.mockReturnValue({
+      plan: { ...planMock, type: Plan.sandbox },
+      enableEducationPlan: true,
+      allowRefreshEducationVerify: false,
+      isEducationAccount: true,
+    })
+    render(<PlanComp loc="billing-page" />)
+
+    expect(screen.queryByText('education.useEducationDiscount')).not.toBeInTheDocument()
   })
 
   it('renders enterprise plan without upgrade button', () => {
@@ -179,7 +277,7 @@ describe('PlanComp', () => {
     })
     render(<PlanComp loc="billing-page" />)
 
-    expect(screen.getByText('billing.plans.enterprise.name')).toBeInTheDocument()
+    expect(screen.getByText('billing.plans.enterprise.name'))!.toBeInTheDocument()
     expect(screen.queryByTestId('plan-upgrade-btn')).not.toBeInTheDocument()
   })
 
@@ -198,7 +296,8 @@ describe('PlanComp', () => {
     render(<PlanComp loc="billing-page" />)
 
     // Sandbox plan with finite apiRateLimit and null reset uses getDaysUntilEndOfMonth()
-    expect(screen.getByText('billing.plans.sandbox.name')).toBeInTheDocument()
+    // Sandbox plan with finite apiRateLimit and null reset uses getDaysUntilEndOfMonth()
+    expect(screen.getByText('billing.plans.sandbox.name'))!.toBeInTheDocument()
   })
 
   it('shows apiRateLimit reset info when reset is a number', () => {
@@ -215,7 +314,7 @@ describe('PlanComp', () => {
     })
     render(<PlanComp loc="billing-page" />)
 
-    expect(screen.getByText('billing.plans.professional.name')).toBeInTheDocument()
+    expect(screen.getByText('billing.plans.professional.name'))!.toBeInTheDocument()
   })
 
   it('does not show education verify when enableEducationPlan is false', () => {
@@ -230,6 +329,21 @@ describe('PlanComp', () => {
     expect(screen.queryByText('education.toVerified')).not.toBeInTheDocument()
   })
 
+  it('does not show cloud-only plan actions in self-hosted edition', () => {
+    mockConfig.isCloudEdition = false
+    providerContextMock.mockReturnValue({
+      plan: { ...planMock, type: Plan.sandbox },
+      enableEducationPlan: true,
+      allowRefreshEducationVerify: false,
+      isEducationAccount: false,
+    })
+    render(<PlanComp loc="billing-page" />)
+
+    expect(screen.queryByText('education.toVerified')).not.toBeInTheDocument()
+    expect(screen.queryByText('education.useEducationDiscount')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('plan-upgrade-btn')).not.toBeInTheDocument()
+  })
+
   it('handles modal onConfirm and onCancel callbacks', async () => {
     mutateAsyncMock.mockRejectedValueOnce(new Error('boom'))
     render(<PlanComp loc="billing-page" />)
@@ -241,7 +355,7 @@ describe('PlanComp', () => {
     await waitFor(() => expect(screen.getByTestId('verify-modal').getAttribute('data-is-show')).toBe('true'))
 
     // Get the props passed to the modal and call onConfirm/onCancel
-    const lastCall = verifyStateModalMock.mock.calls[verifyStateModalMock.mock.calls.length - 1][0]
+    const lastCall = verifyStateModalMock.mock.calls[verifyStateModalMock.mock.calls.length - 1]![0]
     expect(lastCall.onConfirm).toBeDefined()
     expect(lastCall.onCancel).toBeDefined()
 

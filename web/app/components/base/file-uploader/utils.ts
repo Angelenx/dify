@@ -103,7 +103,7 @@ export const getFileExtension = (fileName: string, fileMimetype: string, isRemot
     const fileNamePairLength = fileNamePair.length
 
     if (fileNamePairLength > 1) {
-      extensionInFileName = fileNamePair[fileNamePairLength - 1].toLowerCase()
+      extensionInFileName = fileNamePair[fileNamePairLength - 1]!.toLowerCase()
       if (extensions.has(extensionInFileName))
         extension = extensionInFileName
     }
@@ -130,13 +130,13 @@ export const getFileAppearanceType = (fileName: string, fileMimetype: string) =>
   if (extension === 'gif')
     return FileAppearanceTypeEnum.gif
 
-  if (FILE_EXTS.image.includes(extension.toUpperCase()))
+  if (FILE_EXTS.image!.includes(extension.toUpperCase()))
     return FileAppearanceTypeEnum.image
 
-  if (FILE_EXTS.video.includes(extension.toUpperCase()))
+  if (FILE_EXTS.video!.includes(extension.toUpperCase()))
     return FileAppearanceTypeEnum.video
 
-  if (FILE_EXTS.audio.includes(extension.toUpperCase()))
+  if (FILE_EXTS.audio!.includes(extension.toUpperCase()))
     return FileAppearanceTypeEnum.audio
 
   if (extension === 'html')
@@ -157,7 +157,7 @@ export const getFileAppearanceType = (fileName: string, fileMimetype: string) =>
   if (extension === 'pptx' || extension === 'ppt')
     return FileAppearanceTypeEnum.ppt
 
-  if (FILE_EXTS.document.includes(extension.toUpperCase()))
+  if (FILE_EXTS.document!.includes(extension.toUpperCase()))
     return FileAppearanceTypeEnum.document
 
   return FileAppearanceTypeEnum.custom
@@ -169,7 +169,7 @@ export const getSupportFileType = (fileName: string, fileMimetype: string, isCus
 
   const extension = getFileExtension(fileName, fileMimetype)
   for (const key in FILE_EXTS) {
-    if ((FILE_EXTS[key]).includes(extension.toUpperCase()))
+    if ((FILE_EXTS[key])!.includes(extension.toUpperCase()))
       return key
   }
 

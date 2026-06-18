@@ -1,24 +1,24 @@
 'use client'
 import type { FC } from 'react'
 import type { FullDocumentDetail } from '@/models/datasets'
+import { Button } from '@langgenius/dify-ui/button'
+import { cn } from '@langgenius/dify-ui/cn'
 import { RiEditLine } from '@remixicon/react'
 import * as React from 'react'
 import { useTranslation } from 'react-i18next'
-import Button from '@/app/components/base/button'
 import Divider from '@/app/components/base/divider'
-import { cn } from '@/utils/classnames'
 import useMetadataDocument from '../hooks/use-metadata-document'
 import InfoGroup from './info-group'
 import NoData from './no-data'
 
 const i18nPrefix = 'metadata.documentMetadata'
 
-type Props = {
+type Props = Readonly<{
   datasetId: string
   documentId: string
   className?: string
   docDetail: FullDocumentDetail
-}
+}>
 const MetadataDocument: FC<Props> = ({
   datasetId,
   documentId,

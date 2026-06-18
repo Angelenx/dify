@@ -2,20 +2,17 @@ import type {
   ModelProvider,
 } from './declarations'
 import type { Plugin } from '@/app/components/plugins/types'
-import {
-  RiArrowDownSLine,
-  RiArrowRightUpLine,
-} from '@remixicon/react'
+import { cn } from '@langgenius/dify-ui/cn'
 import { useTheme } from 'next-themes'
-import Link from 'next/link'
 import { useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import Divider from '@/app/components/base/divider'
 import Loading from '@/app/components/base/loading'
 import List from '@/app/components/plugins/marketplace/list'
+import { getMarketplaceCategoryUrl } from '@/app/components/plugins/marketplace/utils'
 import ProviderCard from '@/app/components/plugins/provider-card'
-import { cn } from '@/utils/classnames'
-import { getMarketplaceUrl } from '@/utils/var'
+import { PluginCategoryEnum } from '@/app/components/plugins/types'
+import Link from '@/next/link'
 import {
   useMarketplaceAllPlugins,
 } from './hooks'
@@ -40,22 +37,32 @@ const InstallFromMarketplace = ({
     if (plugin.type === 'bundle')
       return null
 
-    return <ProviderCard key={plugin.plugin_id} payload={plugin} />
+    return <ProviderCard key={plugin.plugin_id} className="h-[146px]" payload={plugin} />
   }, [])
 
   return (
-    <div className="mb-2">
-      <Divider className="!mt-4 h-px" />
-      <div className="flex items-center justify-between">
-        <div className="system-md-semibold flex cursor-pointer items-center gap-1 text-text-primary" onClick={() => setCollapse(!collapse)}>
-          <RiArrowDownSLine className={cn('h-4 w-4', collapse && '-rotate-90')} />
+    <div id="model-provider-marketplace" className="flex scroll-mt-4 flex-col gap-2">
+      <Divider className="my-2! h-px" />
+      <div className="flex h-5 items-center justify-between">
+        <button
+          type="button"
+          className="flex cursor-pointer items-center gap-1 border-0 bg-transparent p-0 text-left system-md-semibold text-text-primary"
+          onClick={() => setCollapse(prev => !prev)}
+          aria-expanded={!collapse}
+        >
+          <span className={cn('i-ri-arrow-down-s-line size-4', collapse && '-rotate-90')} />
           {t('modelProvider.installProvider', { ns: 'common' })}
-        </div>
-        <div className="mb-2 flex items-center pt-2">
-          <span className="system-sm-regular pr-1 text-text-tertiary">{t('modelProvider.discoverMore', { ns: 'common' })}</span>
-          <Link target="_blank" href={getMarketplaceUrl('', { theme })} className="system-sm-medium inline-flex items-center text-text-accent">
+        </button>
+        <div className="flex items-center gap-1">
+          <span className="system-sm-regular text-text-tertiary">{t('modelProvider.discoverMore', { ns: 'common' })}</span>
+          <Link
+            target="_blank"
+            rel="noopener noreferrer"
+            href={getMarketplaceCategoryUrl(PluginCategoryEnum.model, { theme })}
+            className="inline-flex items-center system-sm-medium text-text-accent"
+          >
             {t('marketplace.difyMarketplace', { ns: 'plugin' })}
-            <RiArrowRightUpLine className="h-4 w-4" />
+            <span className="i-ri-arrow-right-up-line size-4" />
           </Link>
         </div>
       </div>
@@ -67,7 +74,7 @@ const InstallFromMarketplace = ({
             marketplaceCollectionPluginsMap={{}}
             plugins={allPlugins}
             showInstallButton
-            cardContainerClassName="grid grid-cols-2 gap-2"
+            cardContainerClassName="grid grid-cols-3 gap-2"
             cardRender={cardRender}
             emptyClassName="h-auto"
           />

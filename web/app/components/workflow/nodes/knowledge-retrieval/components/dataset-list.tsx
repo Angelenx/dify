@@ -9,11 +9,11 @@ import { useSelector as useAppContextSelector } from '@/context/app-context'
 import { hasEditPermissionForDataset } from '@/utils/permission'
 import Item from './dataset-item'
 
-type Props = {
+type Props = Readonly<{
   list: DataSet[]
   onChange: (list: DataSet[]) => void
   readonly?: boolean
-}
+}>
 
 const DatasetList: FC<Props> = ({
   list,
@@ -71,7 +71,7 @@ const DatasetList: FC<Props> = ({
             )
           })
         : (
-            <div className="cursor-default select-none rounded-lg bg-background-section p-3 text-center text-xs text-text-tertiary">
+            <div className="cursor-default rounded-lg bg-background-section p-3 text-center text-xs text-text-tertiary select-none">
               {t('datasetConfig.knowledgeTip', { ns: 'appDebug' })}
             </div>
           )}

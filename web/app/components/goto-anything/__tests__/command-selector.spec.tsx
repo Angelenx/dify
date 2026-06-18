@@ -5,13 +5,13 @@ import { Command } from 'cmdk'
 import * as React from 'react'
 import CommandSelector from '../command-selector'
 
-vi.mock('next/navigation', () => ({
+vi.mock('@/next/navigation', () => ({
   usePathname: () => '/app',
 }))
 
 const slashCommandsMock = [{
-  name: 'zen',
-  description: 'Zen mode',
+  name: 'docs',
+  description: 'Docs',
   mode: 'direct',
   isAvailable: () => true,
 }]
@@ -70,16 +70,16 @@ describe('CommandSelector', () => {
         <CommandSelector
           actions={actions}
           onCommandSelect={onSelect}
-          searchFilter="zen"
-          originalQuery="/zen"
+          searchFilter="docs"
+          originalQuery="/docs"
         />
       </Command>,
     )
 
-    const slashItem = await screen.findByText('app.gotoAnything.actions.zenDesc')
+    const slashItem = await screen.findByText('app.gotoAnything.actions.docDesc')
     await userEvent.click(slashItem)
 
-    expect(onSelect).toHaveBeenCalledWith('/zen')
+    expect(onSelect).toHaveBeenCalledWith('/docs')
   })
 
   it('should show all slash commands when no filter provided', () => {
@@ -97,7 +97,7 @@ describe('CommandSelector', () => {
       </Command>,
     )
 
-    expect(screen.getByText('/zen')).toBeInTheDocument()
+    expect(screen.getByText('/docs')).toBeInTheDocument()
   })
 
   it('should exclude slash action when in @ mode', () => {
