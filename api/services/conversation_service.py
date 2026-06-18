@@ -207,7 +207,7 @@ class ConversationService:
             raise e
 
     @classmethod
-    def soft_delete(cls, app_model: App, conversation_id: str, user: Union[Account, EndUser] | None):
+    def soft_delete(cls, app_model: App, conversation_id: str, user: Account | EndUser | None):
         """
         Soft-delete a conversation by setting is_deleted=True.
 

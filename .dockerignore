@@ -13,3 +13,10 @@
 *.md
 !web/README.md
 !api/README.md
+# HET local-only directories (mirrors .gitignore custom entries)
+tmp
+.codegraph
+.codex
+.qoder
+.context
+**/.vitest-reports

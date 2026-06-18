@@ -223,8 +223,8 @@ services:
     # image: langgenius/dify-api:1.14.2
     image: dify-api:1.14.2
     build:
-      context: ../api
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: api/Dockerfile
     environment:
       MODE: api
       SENTRY_DSN: ${API_SENTRY_DSN:-}
@@ -271,8 +271,8 @@ services:
     # image: langgenius/dify-api:1.14.2
     image: dify-api:1.14.2
     # build:
-    #   context: ../api
-    #   dockerfile: Dockerfile
+    #   context: ..
+    #   dockerfile: api/Dockerfile
     profiles:
       - collaboration
     environment:
@@ -301,8 +301,8 @@ services:
     # image: langgenius/dify-api:1.14.2
     image: dify-api:1.14.2
     # build:
-    #   context: ../api
-    #   dockerfile: Dockerfile
+    #   context: ..
+    #   dockerfile: api/Dockerfile
     environment:
       MODE: worker
       SENTRY_DSN: ${API_SENTRY_DSN:-}
@@ -348,8 +348,8 @@ services:
     # image: langgenius/dify-api:1.14.2
     image: dify-api:1.14.2
     # build:
-    #   context: ../api
-    #   dockerfile: Dockerfile
+    #   context: ..
+    #   dockerfile: api/Dockerfile
     environment:
       MODE: beat
     depends_on:
@@ -385,8 +385,8 @@ services:
     # image: langgenius/dify-web:1.14.2
     image: dify-web:1.14.2
     build:
-      context: ../web
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: web/Dockerfile
     restart: always
     env_file:
       - path: ./envs/core-services/web.env
