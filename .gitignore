@@ -268,3 +268,7 @@ tmp/
 
 # Vitest local reports
 web/.vitest-reports/
+
+# custom
+docker/migrate_apply_*.jsonl
+docker/dify*backup*.sql
