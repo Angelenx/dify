@@ -11,8 +11,9 @@ from controllers.console.app import completion as completion_api
 from controllers.console.app import message as message_api
 from controllers.console.app import wraps
 from libs.datetime_utils import naive_utc_now
-from models import Account, App, Tenant
-from models.account import TenantAccountRole
+from models import App, Tenant
+from models.account import Account, TenantAccountJoin, TenantAccountRole
+from models.enums import ConversationFromSource
 from models.model import AppMode
 from services.app_generate_service import AppGenerateService
 
@@ -25,29 +26,42 @@ class TestChatMessageApiPermissions:
         """Create a mock App model for testing."""
         app = App()
         app.id = str(uuid.uuid4())
-        app.mode = AppMode.CHAT.value
+        app.mode = AppMode.CHAT
         app.tenant_id = str(uuid.uuid4())
         app.status = "normal"
         return app
 
     @pytest.fixture
-    def mock_account(self):
+    def mock_account(self, monkeypatch: pytest.MonkeyPatch):
         """Create a mock Account for testing."""
 
-        account = Account()
-        account.id = str(uuid.uuid4())
-        account.name = "Test User"
-        account.email = "test@example.com"
+        account = Account(
+            name="Test User",
+            email="test@example.com",
+        )
         account.last_active_at = naive_utc_now()
         account.created_at = naive_utc_now()
         account.updated_at = naive_utc_now()
+        account.id = str(uuid.uuid4())
 
         # Create mock tenant
-        tenant = Tenant()
+        tenant = Tenant(name="Test Tenant")
         tenant.id = str(uuid.uuid4())
-        tenant.name = "Test Tenant"
 
-        account._current_tenant = tenant
+        mock_session_instance = mock.Mock()
+
+        mock_tenant_join = TenantAccountJoin(role=TenantAccountRole.OWNER)
+        monkeypatch.setattr(mock_session_instance, "scalar", mock.Mock(return_value=mock_tenant_join))
+
+        mock_scalars_result = mock.Mock()
+        mock_scalars_result.one.return_value = tenant
+        monkeypatch.setattr(mock_session_instance, "scalars", mock.Mock(return_value=mock_scalars_result))
+
+        mock_session_context = mock.Mock()
+        mock_session_context.__enter__.return_value = mock_session_instance
+        monkeypatch.setattr("models.account.Session", lambda _, expire_on_commit: mock_session_context)
+
+        account.current_tenant = tenant
         return account
 
     @pytest.mark.parametrize(
@@ -141,7 +155,7 @@ class TestChatMessageApiPermissions:
             re_sign_file_url_answer="",
             answer_tokens=0,
             provider_response_latency=0.0,
-            from_source="console",
+            from_source=ConversationFromSource.CONSOLE,
             from_end_user_id=None,
             from_account_id=mock_account.id,
             feedbacks=[],
@@ -152,7 +166,7 @@ class TestChatMessageApiPermissions:
             agent_thoughts=[],
             message_files=[],
             message_metadata_dict={},
-            status="success",
+            status="normal",
             error="",
             parent_message_id=None,
         )
