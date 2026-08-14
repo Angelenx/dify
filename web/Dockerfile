@@ -3,7 +3,11 @@ FROM node:22.22.1-alpine AS base
 LABEL maintainer="takatost@gmail.com"
 
 # if you located in China, you can use aliyun mirror to speed up
-# RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
+
+# ENV HTTP_PROXY=http://10.12.71.106:7897
+# ENV HTTPS_PROXY=http://10.12.71.106:7897
+ENV UV_HTTP_TIMEOUT=360
 
 # if you located in China, you can use taobao registry to speed up
 RUN npm config set registry https://registry.npmmirror.com

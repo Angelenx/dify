@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HET Dify 专属服务器全量迁移方案</title>
+  <style>
+    :root {
+      --ink: #172033;
+      --muted: #5d677a;
+      --paper: #f5f7fa;
+      --surface: #ffffff;
+      --line: #d7dde7;
+      --primary: #174ea6;
+      --primary-soft: #e8f0fe;
+      --success: #137333;
+      --success-soft: #e6f4ea;
+      --warning: #b06000;
+      --warning-soft: #fef7e0;
+      --danger: #b3261e;
+      --danger-soft: #fce8e6;
+      --dark: #202938;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--paper);
+      font-family: Inter, "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+      line-height: 1.65;
+    }
+
+    a { color: var(--primary); }
+    .page { max-width: 1240px; margin: 0 auto; padding: 28px 24px 72px; }
+    .hero {
+      background: var(--dark);
+      color: #fff;
+      border-radius: 18px;
+      padding: 38px;
+      display: grid;
+      grid-template-columns: 1.7fr 1fr;
+      gap: 28px;
+      align-items: center;
+    }
+    .hero h1 { margin: 0 0 10px; font-size: 34px; line-height: 1.25; }
+    .hero p { margin: 0; color: #dce4f1; font-size: 17px; }
+    .hero-meta { border-left: 1px solid #526074; padding-left: 24px; }
+    .hero-meta div { margin: 8px 0; }
+    .hero-meta strong { color: #fff; }
+
+    nav {
+      margin: 22px 0;
+      padding: 14px 18px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 16px;
+      position: sticky;
+      top: 8px;
+      z-index: 5;
+    }
+    nav a { text-decoration: none; font-size: 14px; font-weight: 700; }
+
+    section {
+      margin-top: 24px;
+      padding: 28px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+    }
+    section h2 { margin: 0 0 18px; font-size: 25px; }
+    section h3 { margin: 24px 0 10px; font-size: 18px; }
+    .subtitle { color: var(--muted); margin-top: -12px; }
+
+    .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+    .card { border: 1px solid var(--line); border-radius: 12px; padding: 18px; background: #fff; }
+    .card h3 { margin: 0 0 8px; }
+    .card p { margin: 6px 0 0; color: var(--muted); }
+    .metric { font-size: 25px; font-weight: 800; color: var(--primary); }
+    .metric-label { color: var(--muted); font-size: 13px; }
+
+    .tag {
+      display: inline-block;
+      padding: 3px 9px;
+      border-radius: 999px;
+      background: var(--primary-soft);
+      color: var(--primary);
+      font-size: 12px;
+      font-weight: 800;
+      margin: 2px 4px 2px 0;
+    }
+    .ok { background: var(--success-soft); color: var(--success); }
+    .warn { background: var(--warning-soft); color: var(--warning); }
+    .danger { background: var(--danger-soft); color: var(--danger); }
+
+    .flow {
+      display: flex;
+      align-items: stretch;
+      gap: 10px;
+      overflow-x: auto;
+      padding: 8px 0 4px;
+    }
+    .flow-step {
+      min-width: 145px;
+      flex: 1;
+      padding: 16px 13px;
+      border: 2px solid var(--line);
+      border-radius: 12px;
+      background: #fff;
+      text-align: center;
+      position: relative;
+    }
+    .flow-step:not(:last-child)::after {
+      content: "→";
+      position: absolute;
+      right: -15px;
+      top: 38%;
+      color: var(--primary);
+      background: var(--surface);
+      font-size: 20px;
+      font-weight: 900;
+      z-index: 2;
+    }
+    .flow-step strong { display: block; margin-bottom: 6px; }
+    .flow-step small { color: var(--muted); }
+    .flow-step.primary { border-color: var(--primary); background: var(--primary-soft); }
+    .flow-step.success { border-color: var(--success); background: var(--success-soft); }
+    .flow-step.warning { border-color: var(--warning); background: var(--warning-soft); }
+
+    .topology {
+      display: grid;
+      grid-template-columns: 1fr 120px 1fr;
+      gap: 18px;
+      align-items: center;
+      padding: 20px;
+      border: 1px dashed #aab4c5;
+      border-radius: 14px;
+      background: #fafbfd;
+    }
+    .server {
+      border: 2px solid var(--line);
+      border-radius: 14px;
+      padding: 20px;
+      background: #fff;
+    }
+    .server.old { border-color: var(--warning); }
+    .server.new { border-color: var(--success); }
+    .server h3 { margin-top: 0; }
+    .component { margin: 7px 0; padding: 8px 10px; border-radius: 8px; background: var(--paper); font-size: 14px; }
+    .arrow { text-align: center; font-weight: 900; color: var(--primary); font-size: 17px; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td { border-bottom: 1px solid var(--line); padding: 11px 9px; text-align: left; vertical-align: top; }
+    th { color: var(--muted); background: #f8fafc; }
+    code { background: #edf1f7; padding: 2px 6px; border-radius: 5px; font-family: "SFMono-Regular", Consolas, monospace; }
+    pre { background: #202938; color: #edf3fc; padding: 18px; border-radius: 12px; overflow-x: auto; font-size: 13px; }
+
+    .timeline { position: relative; margin-left: 12px; padding-left: 30px; border-left: 3px solid var(--line); }
+    .event { position: relative; margin: 0 0 24px; }
+    .event::before {
+      content: "";
+      position: absolute;
+      left: -39px;
+      top: 5px;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--primary);
+      border: 3px solid var(--surface);
+    }
+    .event h3 { margin: 0 0 5px; }
+    .event p { margin: 0; color: var(--muted); }
+
+    .decision { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .decision-box { border: 2px solid var(--line); border-radius: 12px; padding: 16px; }
+    .decision-box.stop { border-color: var(--danger); background: var(--danger-soft); }
+    .decision-box.go { border-color: var(--success); background: var(--success-soft); }
+    .decision-box h3 { margin-top: 0; }
+
+    .callout { border-left: 5px solid var(--warning); background: var(--warning-soft); padding: 15px 18px; border-radius: 8px; }
+    .callout strong { color: var(--warning); }
+    .callout.danger-callout { border-color: var(--danger); background: var(--danger-soft); }
+    .callout.danger-callout strong { color: var(--danger); }
+
+    ul.checklist { list-style: none; padding: 0; }
+    ul.checklist li { margin: 7px 0; padding-left: 26px; position: relative; }
+    ul.checklist li::before { content: "□"; position: absolute; left: 0; font-size: 18px; color: var(--primary); }
+
+    footer { text-align: center; color: var(--muted); padding: 30px 0 0; font-size: 13px; }
+
+    @media (max-width: 880px) {
+      .hero, .grid-2, .grid-3, .grid-4, .topology, .decision { grid-template-columns: 1fr; }
+      .topology .arrow { transform: rotate(90deg); }
+      nav { position: static; }
+      .page { padding: 14px 12px 40px; }
+      section, .hero { padding: 22px; }
+    }
+
+    @media print {
+      body { background: #fff; }
+      nav { display: none; }
+      .page { max-width: none; padding: 0; }
+      section, .hero { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="hero">
+      <div>
+        <span class="tag">生产迁移</span>
+        <span class="tag ok">全量停机迁移</span>
+        <span class="tag">单机 Compose → 单机 Compose</span>
+        <h1>HET Dify 专属服务器全量迁移方案</h1>
+        <p>以数据一致性为第一目标，通过预构建、完整演练、停写归档、同路径恢复和旧 IP 代理，完成 HET 定制版 Dify 的可靠迁移。</p>
+      </div>
+      <div class="hero-meta">
+        <div><strong>源目录</strong><br>/data/angelen/dify</div>
+        <div><strong>迁移窗口</strong><br>周末，允许数小时停机</div>
+        <div><strong>版本原则</strong><br>完全冻结，迁移与升级分离</div>
+        <div><strong>回滚点</strong><br>旧服务器保留 30 天</div>
+      </div>
+    </header>
+
+    <nav aria-label="文档导航">
+      <a href="#summary">结论</a>
+      <a href="#current">当前结构</a>
+      <a href="#architecture">迁移架构</a>
+      <a href="#phases">阶段计划</a>
+      <a href="#data">数据方法</a>
+      <a href="#cutover">流量切换</a>
+      <a href="#acceptance">验收</a>
+      <a href="#rollback">回滚</a>
+      <a href="#risks">风险</a>
+      <a href="#checklist">执行清单</a>
+    </nav>
+
+    <section id="summary">
+      <h2>一页结论</h2>
+      <p class="subtitle">本次迁移不是“复制代码并启动”，而是一次生产数据一致性迁移。</p>
+      <div class="grid-4">
+        <div class="card"><div class="metric">16 核</div><div class="metric-label">目标服务器 AMD64 CPU</div></div>
+        <div class="card"><div class="metric">32 GB</div><div class="metric-label">内存，历史峰值约 20 GB</div></div>
+        <div class="card"><div class="metric">1 TB</div><div class="metric-label">单一根文件系统，不拆分 /data</div></div>
+        <div class="card"><div class="metric">24.04 LTS</div><div class="metric-label">Ubuntu 生产长期支持版本</div></div>
+      </div>
+      <h3>核心路径</h3>
+      <div class="flow">
+        <div class="flow-step"><strong>盘点</strong><small>资源、容器、卷、端口、外部依赖</small></div>
+        <div class="flow-step"><strong>预构建</strong><small>目标机提前拉镜像与 build</small></div>
+        <div class="flow-step"><strong>演练</strong><small>完整恢复并记录耗时</small></div>
+        <div class="flow-step warning"><strong>停写</strong><small>停止源 Compose 全部容器</small></div>
+        <div class="flow-step primary"><strong>归档</strong><small>tar 保元数据 → 7z 压缩</small></div>
+        <div class="flow-step"><strong>传输</strong><small>rsync + SHA-256</small></div>
+        <div class="flow-step"><strong>恢复</strong><small>同路径解压、构建、启动</small></div>
+        <div class="flow-step success"><strong>切换</strong><small>验收后开放，旧 IP 代理</small></div>
+      </div>
+    </section>
+
+    <section id="current">
+      <h2>当前项目结构与迁移边界</h2>
+      <div class="topology">
+        <div class="server old">
+          <h3>源服务器：当前 HET Dify</h3>
+          <div class="component">Web：Next.js，本地镜像 dify-web:1.14.2</div>
+          <div class="component">API / Worker / Beat：Flask + Celery，本地镜像 dify-api:1.14.2</div>
+          <div class="component">PostgreSQL 15 + Redis 6</div>
+          <div class="component">Weaviate 1.27.0 + filesystem backup</div>
+          <div class="component">Plugin Daemon + 本地插件存储</div>
+          <div class="component">Sandbox + HET Excel 依赖</div>
+          <div class="component">Squid SSRF Proxy + Compose Nginx</div>
+        </div>
+        <div class="arrow">完整迁移<br>SSH / rsync<br>→</div>
+        <div class="server new">
+          <h3>目标服务器：专属 Dify</h3>
+          <div class="component">Ubuntu 24.04 LTS / AMD64 / 固定内网 IP</div>
+          <div class="component">16 核 CPU / 32 GB RAM / 1 TB 单根文件系统</div>
+          <div class="component">相同路径 /data/angelen/dify</div>
+          <div class="component">相同 Git commit、Compose 和密钥</div>
+          <div class="component">相同端口与 URL 路径，仅 IP 变化</div>
+          <div class="component">重新 docker compose build</div>
+          <div class="component">重新安装 1Panel 与备份任务</div>
+          <div class="component">技术验收后成为唯一写入端</div>
+        </div>
+      </div>
+
+      <h3>持久化数据地图</h3>
+      <table>
+        <thead><tr><th>数据域</th><th>项目内路径</th><th>主要内容</th><th>保护方法</th></tr></thead>
+        <tbody>
+          <tr><td>PostgreSQL</td><td><code>docker/volumes/db/data</code></td><td>账号、应用、工作流、会话、插件库</td><td>停库物理目录 + pg_dumpall/custom dump</td></tr>
+          <tr><td>Weaviate</td><td><code>docker/volumes/weaviate</code></td><td>知识库向量、backup-filesystem 目录</td><td>停服目录 + Weaviate 逻辑备份</td></tr>
+          <tr><td>文件存储</td><td><code>docker/volumes/app/storage</code></td><td>上传文件、知识库原文件</td><td>tar 保留权限与软链接</td></tr>
+          <tr><td>插件</td><td><code>docker/volumes/plugin_daemon</code></td><td>插件包、运行环境、媒体、安装状态</td><td>完整目录迁移 + 插件抽样调用</td></tr>
+          <tr><td>Redis</td><td><code>docker/volumes/redis/data</code></td><td>缓存、队列和持久化文件</td><td>停服目录复制，检查 RDB/AOF</td></tr>
+          <tr><td>Sandbox</td><td><code>docker/volumes/sandbox</code></td><td>依赖、conf、Excel 库和 syscall 配置</td><td>完整目录迁移 + Excel 验证</td></tr>
+        </tbody>
+      </table>
+      <div class="callout" style="margin-top:16px">
+        <strong>不能只相信目录假设：</strong>正式迁移前必须以运行容器的 <code>docker inspect ... Mounts</code> 为准，检查项目外 bind mount 和 Docker named volume。
+      </div>
+      <h3>当前 .env 实测结论</h3>
+      <div class="grid-3">
+        <div class="card"><h3>本地化存储已确认</h3><p>PostgreSQL、Redis、Weaviate、OpenDAL 文件存储和插件存储均指向 Compose 内服务或项目内目录，全量目录迁移方向正确。</p></div>
+        <div class="card"><h3>8 个地址必须改新 IP</h3><p>Console、Service、Trigger、WebApp、FILES_URL 及 INTERNAL_FILES_URL 当前均依赖旧外部 IP；漏改会永久依赖旧代理。</p></div>
+        <div class="card"><h3>密钥必须原样迁移</h3><p>SECRET_KEY 及数据库、Redis、Weaviate、Plugin、Sandbox 等认证值必须保持一致，不在迁移窗口轮换。</p></div>
+      </div>
+      <div class="callout danger-callout" style="margin-top:16px">
+        <strong>已确认的配置风险：</strong><code>docker/.env</code> 当前权限为 777 且包含生产凭据；目标端恢复后应在确认 Compose 可读的前提下收紧到 600。当前还存在 HTTP、宽 CORS、Swagger 开启、Weaviate 匿名访问和插件签名校验关闭等安全基线问题，应在迁移稳定后单独整改，不与本次迁移混做。
+      </div>
+    </section>
+
+    <section id="architecture">
+      <h2>迁移前后流量与数据关系</h2>
+      <div class="grid-3">
+        <div class="card">
+          <h3>迁移前</h3>
+          <p><span class="tag warn">唯一生产端</span></p>
+          <p>用户和智能体直接访问旧 IP；源服务器上的 Compose 同时承载应用和数据。</p>
+        </div>
+        <div class="card">
+          <h3>正式窗口</h3>
+          <p><span class="tag danger">完全停写</span></p>
+          <p>停止旧 Compose，制作最终一致性归档；目标服务器尚不接受普通用户写入。</p>
+        </div>
+        <div class="card">
+          <h3>迁移后</h3>
+          <p><span class="tag ok">新端唯一写入</span></p>
+          <p>新服务器承载全部服务；旧服务器只运行独立 Nginx，把旧 IP 请求代理到新 IP。</p>
+        </div>
+      </div>
+      <h3>过渡期拓扑</h3>
+      <div class="topology">
+        <div class="server old">
+          <h3>旧 IP</h3>
+          <div class="component">旧 Dify Compose：全部停止</div>
+          <div class="component">独立 Nginx：继续运行</div>
+          <div class="component">记录仍使用旧 IP 的客户端</div>
+        </div>
+        <div class="arrow">HTTP<br>SSE<br>WebSocket<br>上传<br>→</div>
+        <div class="server new">
+          <h3>新 IP</h3>
+          <div class="component">唯一生产 Dify Compose</div>
+          <div class="component">唯一 PostgreSQL / Redis / Weaviate</div>
+          <div class="component">开发者逐步修改为直接访问新 IP</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="phases">
+      <h2>分阶段实施计划</h2>
+      <p class="subtitle">单人实施；工作日每天约 1～2 小时；正式迁移暂定 2026-08-22 13:00。</p>
+      <div class="timeline">
+        <div class="event">
+          <h3>7 月 29 日～8 月 7 日：前期准备与源端盘点</h3>
+          <p>完善方案，核对资源、Compose、数据目录、环境配置、备份脚本、端口和外部依赖；跟进目标服务器交付。预计个人投入 5～8 小时。</p>
+        </div>
+        <div class="event">
+          <h3>8 月 3 日～8 月 7 日：目标服务器初始化</h3>
+          <p>安装 Ubuntu 24.04 LTS、Docker 官方 stable 最新版、1Panel 和迁移工具，配置网络、目录、日志与告警。预计个人投入 3～5 小时。</p>
+        </div>
+        <div class="event">
+          <h3>8 月 6 日～8 月 11 日：预同步与预构建</h3>
+          <p>同步冻结版本代码，提前拉取基础镜像并构建 api/web，保存 Docker 与镜像版本基线。预计个人投入 2～4 小时。</p>
+        </div>
+        <div class="event">
+          <h3>8 月 10 日～8 月 14 日：完整恢复演练</h3>
+          <p>使用届时最新自动备份恢复，验证权限、数据、插件、文件、HET 定制和 Nginx 转发，记录实际耗时。预计个人投入 5～8 小时，分多天完成。</p>
+        </div>
+        <div class="event">
+          <h3>8 月 17 日～8 月 21 日：迁移前收尾</h3>
+          <p>修订步骤、冻结版本、检查空间和网络、准备 Nginx、临时通知用户。预计个人投入 3～5 小时。</p>
+        </div>
+        <div class="event">
+          <h3>8 月 22 日 13:00：正式迁移</h3>
+          <p>停止源 Compose，使用 tar + zstd -T0 -15 制作最终归档并经 SSH 传输，完成校验、恢复、启动、技术验收及旧 IP 代理。计划约 4 小时，现场决定延长或回滚。</p>
+        </div>
+        <div class="event">
+          <h3>8 月 24 日起：观察与收尾</h3>
+          <p>观察资源和错误，处理用户反馈，推动开发者改新 IP，重建自动备份；源端数据和回滚点至少保留 30 天。</p>
+        </div>
+      </div>
+      <div class="callout" style="margin-top:16px"><strong>时间风险：</strong>当前约 73 GB 的全量备份使用 zstd -15 需要约 100～117 分钟。正式窗口仅计划 4 小时，因此目标端预构建和完整演练是正式迁移的必要前置条件；若服务器延迟交付，不应压缩演练时间。</div>
+    </section>
+
+    <section id="data">
+      <h2>数据迁移方法：主介质 + 双重兜底</h2>
+      <div class="grid-3">
+        <div class="card">
+          <span class="tag">主介质</span>
+          <h3>完整项目 tar → 7z</h3>
+          <p>源 Compose 完全停止后，对 <code>/data/angelen/dify</code> 完整归档。tar 保存 UID/GID、ACL、xattr 和软链接，7z 提供压缩。</p>
+        </div>
+        <div class="card">
+          <span class="tag ok">兜底 1</span>
+          <h3>PostgreSQL 逻辑备份</h3>
+          <p>额外生成 <code>pg_dumpall</code> 和业务库/插件库 custom-format dump，在物理目录无法直接恢复时提供结构化恢复路径。</p>
+        </div>
+        <div class="card">
+          <span class="tag ok">兜底 2</span>
+          <h3>Weaviate 逻辑备份</h3>
+          <p>使用已经启用的 filesystem backup，把向量集合以 Weaviate 支持的方式导出，防止仅复制底层文件后出现兼容问题。</p>
+        </div>
+      </div>
+      <h3>归档链路</h3>
+      <div class="flow">
+        <div class="flow-step warning"><strong>Stop</strong><small>停止全部 Compose 容器</small></div>
+        <div class="flow-step"><strong>Snapshot</strong><small>记录 Git、镜像、计数、Compose</small></div>
+        <div class="flow-step primary"><strong>tar</strong><small>保留 Linux 元数据</small></div>
+        <div class="flow-step"><strong>7z</strong><small>压缩并执行 7z t</small></div>
+        <div class="flow-step"><strong>SHA-256</strong><small>生成内容校验值</small></div>
+        <div class="flow-step"><strong>rsync</strong><small>支持断点续传</small></div>
+        <div class="flow-step success"><strong>Restore</strong><small>校验通过才允许解压</small></div>
+      </div>
+      <pre>tar --xattrs --acls --numeric-owner -cpf dify-full.tar dify
+7z a -t7z -mx=3 -mmt=on dify-full.tar.7z dify-full.tar
+7z t dify-full.tar.7z
+sha256sum dify-full.tar.7z &gt; dify-full.tar.7z.sha256
+rsync -ah --partial --append-verify dify-full.tar.7z* root@NEW_IP:/data/migration/</pre>
+      <div class="callout danger-callout">
+        <strong>禁止操作：</strong>不得执行 <code>docker compose down -v</code>，不得在迁移窗口清理 volume、镜像或源目录。
+      </div>
+    </section>
+
+    <section id="cutover">
+      <h2>旧 IP 无感过渡方案</h2>
+      <p>由于超过 50 台终端或开发者可能仍使用旧 IP，迁移后不立即释放源服务器。旧端停止所有 Dify 容器，仅部署独立 Nginx，将每个旧入口代理到新服务器相同端口。</p>
+      <div class="grid-2">
+        <div class="card">
+          <h3>Nginx 必须支持</h3>
+          <ul>
+            <li>HTTP/1.1 keepalive</li>
+            <li>SSE：关闭 <code>proxy_buffering</code></li>
+            <li>WebSocket：传递 Upgrade/Connection</li>
+            <li>大文件：提高 <code>client_max_body_size</code></li>
+            <li>长任务：提高 read/send timeout</li>
+            <li>保留 X-Forwarded-For 和客户端 IP</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>停止转发条件</h3>
+          <ul>
+            <li>所有智能体开发者确认改用新 IP</li>
+            <li>旧 Nginx 日志无有效业务访问</li>
+            <li>新端业务与技术验收稳定</li>
+            <li>新端自动备份成功运行并抽检</li>
+            <li>源端回滚点至少保留 30 天</li>
+          </ul>
+        </div>
+      </div>
+      <div class="callout" style="margin-top:16px">
+        <strong>多入口要求：</strong>当前访问形式包含多个 IP/端口。正式盘点必须形成完整映射表：<code>旧 IP:旧端口 → 新 IP:相同端口</code>，逐入口验证页面、API、SSE、WebSocket、上传和插件调试。HET 环境中的 <code>INTERNAL_FILES_URL</code> 必须指向插件可访问的新服务器外部 IP:端口，不能改为容器内 <code>http://api:5001</code>；否则外网插件无法下载文件。
+      </div>
+    </section>
+
+    <section id="acceptance">
+      <h2>验收闸门</h2>
+      <p class="subtitle">容器显示 Up 不代表迁移成功。必须通过数据、功能、协议和定制四层验收。</p>
+      <div class="grid-4">
+        <div class="card"><h3>基础设施</h3><p>健康检查、数据库、Redis、Weaviate、Sandbox、插件、磁盘和队列。</p></div>
+        <div class="card"><h3>数据完整性</h3><p>账号、应用、工作流、知识库、文档、会话、向量对象、文件与插件计数。</p></div>
+        <div class="card"><h3>业务链路</h3><p>登录、聊天、工作流、知识库检索、上传下载、模型及插件调用。</p></div>
+        <div class="card"><h3>HET 定制</h3><p>App 权限、会话软删、HTTP 复制、变量块、Excel、SSRF 与匿名 share 页。</p></div>
+      </div>
+      <h3>开放写入决策</h3>
+      <div class="decision">
+        <div class="decision-box go">
+          <h3>GO：可以开放</h3>
+          <ul>
+            <li>数据计数一致</li>
+            <li>关键链路全部通过</li>
+            <li>无持续错误和重启</li>
+            <li>迁移负责人明确授权</li>
+          </ul>
+        </div>
+        <div class="decision-box stop">
+          <h3>NO-GO：立即停止</h3>
+          <ul>
+            <li>数据库/向量/文件不一致</li>
+            <li>登录、应用、工作流或知识库失败</li>
+            <li>插件大面积失效</li>
+            <li>HET 关键定制回退</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section id="rollback">
+      <h2>回滚决策树</h2>
+      <div class="flow">
+        <div class="flow-step warning"><strong>发现严重故障</strong><small>停止新端流量与写入</small></div>
+        <div class="flow-step primary"><strong>是否已开放写入？</strong><small>判断增量数据窗口</small></div>
+        <div class="flow-step success"><strong>否</strong><small>直接停新端，启动旧 Compose</small></div>
+        <div class="flow-step warning"><strong>是</strong><small>归档新端现场，接受增量丢失</small></div>
+        <div class="flow-step"><strong>恢复旧端</strong><small>停止 Nginx，启动源 Compose</small></div>
+      </div>
+      <div class="grid-2" style="margin-top:18px">
+        <div class="card">
+          <h3>开放写入前</h3>
+          <p>源端从停机后没有任何数据变化。停新端、停代理、启动源 Compose 即可，属于低风险回滚。</p>
+        </div>
+        <div class="card">
+          <h3>开放写入后</h3>
+          <p>已确认可接受新端增量数据丢失。回滚前仍应停止新端并保存现场，明确通知业务方丢失时间窗口。</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="risks">
+      <h2>主要风险与控制</h2>
+      <table>
+        <thead><tr><th>风险</th><th>后果</th><th>控制措施</th></tr></thead>
+        <tbody>
+          <tr><td>遗漏项目外挂载或命名卷</td><td>部分数据缺失</td><td>盘点运行容器全部 Mounts；比较 docker volume ls</td></tr>
+          <tr><td>只复制数据库物理目录</td><td>版本/文件兼容问题</td><td>停库复制 + PostgreSQL 逻辑备份双保险</td></tr>
+          <tr><td>目标端重新构建依赖变化</td><td>相同代码产生不同镜像</td><td>冻结 commit/lockfile；提前预构建；记录镜像 ID</td></tr>
+          <tr><td>最新 Docker 在演练后继续自动升级</td><td>正式窗口版本与演练版本不一致</td><td>初始化时安装官方 stable 最新版；演练通过后记录并冻结 Engine、containerd、Buildx、Compose 实际版本</td></tr>
+          <tr><td>演练触发定时任务/Webhook</td><td>重复通知或修改外部系统</td><td>演练前盘点 Celery Beat、定时工作流和外部副作用</td></tr>
+          <tr><td>Nginx 不支持 SSE/WebSocket</td><td>聊天流断开、协作失败</td><td>关闭缓冲、保留升级头、提高长连接超时</td></tr>
+          <tr><td>新 IP 不在外部白名单</td><td>模型、MCP、Webhook 或插件失败</td><td>迁移前做新端连通性探测并申请白名单</td></tr>
+          <tr><td>INTERNAL_FILES_URL 被误改为容器内地址</td><td>外网插件无法下载签名文件 URL</td><td>按 HET 实际约束设置为新服务器外部 IP:端口，并分别从新 IP 与旧 IP 代理验证</td></tr>
+          <tr><td>单根文件系统被日志/归档填满</td><td>操作系统与 Dify 同时不可用</td><td>设置 70%/80%/90% 告警；限制 Docker 日志、构建缓存、1Panel 备份和迁移包保留</td></tr>
+          <tr><td>32 GB 内存余量不足</td><td>Worker、Weaviate、PostgreSQL 共同峰值时触发 OOM/Swap</td><td>设置 22.4 GB/27.2 GB 两级告警，观察共同峰值；配置适量 Swap 仅作突发保护</td></tr>
+          <tr><td>NUMEXPR 线程高于 CPU 核数</td><td>计算任务过度争抢 16 核 CPU</td><td>将 NUMEXPR_MAX_THREADS 从 20 调整为不超过 16，并在迁移后压测</td></tr>
+          <tr><td>开放写入后回滚</td><td>新端新增数据丢失</td><td>开放前明确授权；回滚时记录数据丢失窗口</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="checklist">
+      <h2>高层执行清单</h2>
+      <div class="grid-3">
+        <div>
+          <h3>迁移前</h3>
+          <ul class="checklist">
+            <li>完成源端只读盘点</li>
+            <li>评审 1Panel 备份脚本</li>
+            <li>确定目标服务器规格</li>
+            <li>完成预构建和恢复演练</li>
+            <li>冻结代码、Compose 和密钥</li>
+            <li>准备多入口 Nginx 配置</li>
+          </ul>
+        </div>
+        <div>
+          <h3>正式窗口</h3>
+          <ul class="checklist">
+            <li>停止旧 Compose 全部容器</li>
+            <li>制作逻辑兜底备份</li>
+            <li>生成 tar→7z 全量归档</li>
+            <li>完成 7z 与 SHA-256 校验</li>
+            <li>目标端同路径恢复并启动</li>
+            <li>技术验收通过后开放写入</li>
+          </ul>
+        </div>
+        <div>
+          <h3>迁移后</h3>
+          <ul class="checklist">
+            <li>源端独立 Nginx 代理旧 IP</li>
+            <li>持续业务验收和资源观察</li>
+            <li>推动开发者修改新 IP</li>
+            <li>重建并验证自动备份</li>
+            <li>保留源数据与备份 30 天</li>
+            <li>满足条件后撤销旧端</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>目标服务器申请摘要</h2>
+      <table>
+        <tbody>
+          <tr><th>部署形态</th><td>单台专属服务器，完整 Docker Compose</td></tr>
+          <tr><th>架构与系统</th><td>x86_64 / AMD64；Ubuntu 24.04 LTS</td></tr>
+          <tr><th>网络</th><td>固定内网 IP；与源服务器 SSH 互通；现有端口可开放；可访问互联网和依赖源</td></tr>
+          <tr><th>目录</th><td>保持 <code>/data/angelen/dify</code></td></tr>
+          <tr><th>CPU/内存</th><td>16 核 / 32 GB RAM；Dify 历史内存峰值约 20 GB，剩余约 12 GB（37.5%）余量</td></tr>
+          <tr><th>磁盘</th><td>1 TB 单一根文件系统，<code>/data</code> 不单独分区；系统、Docker、数据、日志和归档共享容量</td></tr>
+          <tr><th>Docker</th><td>通过 Docker 官方 stable APT 仓库安装初始化时最新稳定版 docker-ce、CLI、containerd、Buildx 和 Compose Plugin；演练通过后记录并冻结实际版本</td></tr>
+          <tr><th>权限</th><td>root；允许安装 Docker、1Panel、Nginx、tar、7z、rsync</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <footer>
+      <p>详细命令、检查项和恢复步骤请以《HET-Dify专属服务器迁移方案.md》为执行依据。本文用于架构讲解、评审与迁移沟通。</p>
+    </footer>
+  </main>
+</body>
+</html>
