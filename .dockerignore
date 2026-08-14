@@ -20,3 +20,5 @@ tmp
 .qoder
 .context
 **/.vitest-reports
+# Runtime data must not enter the monorepo Docker build context (permission + size).
+docker/volumes

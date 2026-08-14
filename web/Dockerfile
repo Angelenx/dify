@@ -34,8 +34,17 @@ COPY packages /app/packages
 # Use packageManager from package.json
 RUN corepack install
 
+# pnpm-lock pins Node runtime binaries to nodejs.org / unofficial-builds.nodejs.org.
+# Those origins often stall inside Docker here; rewrite to npmmirror CDN (same files/checksums).
+RUN sed -i \
+      -e 's|https://unofficial-builds.nodejs.org/download/release/|https://cdn.npmmirror.com/binaries/node-unofficial-builds/|g' \
+      -e 's|https://nodejs.org/download/release/|https://cdn.npmmirror.com/binaries/node/|g' \
+      pnpm-lock.yaml
+
 # Install workspace dependencies for the Docker build environment.
-RUN VITE_GIT_HOOKS=0 pnpm install --frozen-lockfile
+# Lower concurrency + longer fetch timeout: large musl native tarballs still flake under burst traffic.
+ENV PNPM_NETWORK_CONCURRENCY=8
+RUN VITE_GIT_HOOKS=0 pnpm install --frozen-lockfile --fetch-timeout 600000
 
 # build resources
 FROM base AS builder
