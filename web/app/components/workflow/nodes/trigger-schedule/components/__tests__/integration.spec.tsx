@@ -1,9 +1,8 @@
-/* eslint-disable ts/no-explicit-any */
+/* oxlint-disable typescript/no-explicit-any */
 import type { ScheduleTriggerNodeType } from '../../types'
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import FrequencySelector from '../frequency-selector'
-import ModeSwitcher from '../mode-switcher'
 import ModeToggle from '../mode-toggle'
 import MonthlyDaysSelector from '../monthly-days-selector'
 import NextExecutionTimes from '../next-execution-times'
@@ -36,36 +35,16 @@ describe('trigger-schedule components', () => {
     it('should select a new frequency from the dropdown options', async () => {
       const user = userEvent.setup()
       const onChange = vi.fn()
-      render(
-        <FrequencySelector
-          frequency="daily"
-          onChange={onChange}
-        />,
-      )
+      render(<FrequencySelector frequency="daily" onChange={onChange} />)
 
-      const trigger = screen.getByRole('button', { name: 'workflow.nodes.triggerSchedule.frequency.daily' })
-      fireEvent.click(trigger)
-
-      await waitFor(() => {
-        expect(trigger).toHaveAttribute('aria-expanded', 'true')
-      })
-
-      const listbox = await screen.findByRole('listbox')
-      await user.click(within(listbox).getByText('workflow.nodes.triggerSchedule.frequency.weekly'))
+      const trigger = screen.getByRole('combobox')
+      await user.click(trigger)
+      await user.keyboard('{ArrowDown}')
+      await user.keyboard('{Enter}')
 
       await waitFor(() => {
         expect(onChange).toHaveBeenCalledWith('weekly')
       })
-    })
-
-    it('should switch between visual and cron modes', async () => {
-      const user = userEvent.setup()
-      const onChange = vi.fn()
-      render(<ModeSwitcher mode="visual" onChange={onChange} />)
-
-      await user.click(screen.getByText('workflow.nodes.triggerSchedule.modeCron'))
-
-      expect(onChange).toHaveBeenCalledWith('cron')
     })
 
     it('should toggle the mode from visual to cron', async () => {
@@ -93,7 +72,9 @@ describe('trigger-schedule components', () => {
       const onChange = vi.fn()
       render(<OnMinuteSelector value={15} onChange={onChange} />)
 
-      const slider = screen.getByLabelText('workflow.nodes.triggerSchedule.onMinute')
+      const slider = screen.getByRole('slider', {
+        name: 'workflow.nodes.triggerSchedule.onMinute',
+      })
       slider.focus()
       await user.keyboard('{ArrowRight}')
 
@@ -135,16 +116,24 @@ describe('trigger-schedule components', () => {
     it('should render the upcoming execution times when the schedule is valid', () => {
       render(<NextExecutionTimes data={createData()} />)
 
-      expect(screen.getByText('workflow.nodes.triggerSchedule.nextExecutionTimes')).toBeInTheDocument()
+      expect(
+        screen.getByText('workflow.nodes.triggerSchedule.nextExecutionTimes'),
+      ).toBeInTheDocument()
       expect(screen.getAllByText(/^\d{2}$/).length).toBeGreaterThan(0)
     })
 
     it('should hide upcoming execution times when frequency is missing or cron is invalid', () => {
-      const { rerender, container } = render(<NextExecutionTimes data={createData({ frequency: undefined }) as any} />)
+      const { rerender, container } = render(
+        <NextExecutionTimes data={createData({ frequency: undefined }) as any} />,
+      )
 
       expect(container).toBeEmptyDOMElement()
 
-      rerender(<NextExecutionTimes data={createData({ mode: 'cron', cron_expression: 'bad cron' }) as any} />)
+      rerender(
+        <NextExecutionTimes
+          data={createData({ mode: 'cron', cron_expression: 'bad cron' }) as any}
+        />,
+      )
       expect(container).toBeEmptyDOMElement()
     })
   })

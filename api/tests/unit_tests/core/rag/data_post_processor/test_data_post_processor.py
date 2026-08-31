@@ -1,14 +1,14 @@
 from unittest.mock import MagicMock, patch
 
-import pytest
+from sqlalchemy.orm import Session
 
 from core.rag.data_post_processor.data_post_processor import DataPostProcessor
 from core.rag.data_post_processor.reorder import ReorderRunner
 from core.rag.index_processor.constant.query_type import QueryType
 from core.rag.models.document import Document
 from core.rag.rerank.rerank_type import RerankMode
-from dify_graph.model_runtime.entities.model_entities import ModelType
-from dify_graph.model_runtime.errors.invoke import InvokeAuthorizationError
+from graphon.model_runtime.entities.model_entities import ModelType
+from graphon.model_runtime.errors.invoke import InvokeAuthorizationError
 
 
 def _doc(content: str) -> Document:
@@ -16,7 +16,7 @@ def _doc(content: str) -> Document:
 
 
 class TestDataPostProcessor:
-    def test_init_sets_rerank_and_reorder_runners(self):
+    def test_init_sets_rerank_and_reorder_runners(self, unbound_session: Session):
         rerank_runner = object()
         reorder_runner = object()
 
@@ -28,6 +28,7 @@ class TestDataPostProcessor:
                     reranking_model={"config": "value"},
                     weights={"weight": "value"},
                     reorder_enabled=True,
+                    session=unbound_session,
                 )
 
         assert processor.rerank_runner is rerank_runner
@@ -37,6 +38,7 @@ class TestDataPostProcessor:
             "tenant-1",
             {"config": "value"},
             {"weight": "value"},
+            session=unbound_session,
         )
         reorder_mock.assert_called_once_with(True)
 
@@ -56,7 +58,6 @@ class TestDataPostProcessor:
             documents=original_documents,
             score_threshold=0.3,
             top_n=2,
-            user="user-1",
             query_type=QueryType.IMAGE_QUERY,
         )
 
@@ -65,7 +66,6 @@ class TestDataPostProcessor:
             original_documents,
             0.3,
             2,
-            "user-1",
             QueryType.IMAGE_QUERY,
         )
         processor.reorder_runner.run.assert_called_once_with(reranked_documents)
@@ -80,7 +80,7 @@ class TestDataPostProcessor:
 
         assert processor.invoke(query="query", documents=documents) == documents
 
-    def test_get_rerank_runner_for_weighted_score(self):
+    def test_get_rerank_runner_for_weighted_score(self, unbound_session: Session):
         weights_config = {
             "vector_setting": {
                 "vector_weight": 0.7,
@@ -101,6 +101,7 @@ class TestDataPostProcessor:
                 tenant_id="tenant-1",
                 reranking_model=None,
                 weights=weights_config,
+                session=unbound_session,
             )
 
         assert result is expected_runner
@@ -112,7 +113,7 @@ class TestDataPostProcessor:
         assert kwargs["weights"].vector_setting.embedding_model_name == "embedding-y"
         assert kwargs["weights"].keyword_setting.keyword_weight == 0.3
 
-    def test_get_rerank_runner_for_reranking_model_returns_none_without_model_instance(self):
+    def test_get_rerank_runner_for_reranking_model_returns_none_without_model_instance(self, unbound_session: Session):
         processor = DataPostProcessor.__new__(DataPostProcessor)
         reranking_model = {
             "reranking_provider_name": "provider-x",
@@ -128,13 +129,14 @@ class TestDataPostProcessor:
                     tenant_id="tenant-1",
                     reranking_model=reranking_model,
                     weights=None,
+                    session=unbound_session,
                 )
 
         assert result is None
         model_mock.assert_called_once_with("tenant-1", reranking_model)
         factory_mock.assert_not_called()
 
-    def test_get_rerank_runner_for_reranking_model_creates_runner_with_model_instance(self):
+    def test_get_rerank_runner_for_reranking_model_creates_runner_with_model_instance(self, unbound_session: Session):
         processor = DataPostProcessor.__new__(DataPostProcessor)
         model_instance = object()
         expected_runner = object()
@@ -152,19 +154,24 @@ class TestDataPostProcessor:
                         "reranking_model_name": "model-y",
                     },
                     weights=None,
+                    session=unbound_session,
                 )
 
         assert result is expected_runner
         factory_mock.assert_called_once_with(
             runner_type=RerankMode.RERANKING_MODEL,
             rerank_model_instance=model_instance,
+            session=unbound_session,
         )
 
-    def test_get_rerank_runner_returns_none_for_unsupported_mode(self):
+    def test_get_rerank_runner_returns_none_for_unsupported_mode(self, unbound_session: Session):
         processor = DataPostProcessor.__new__(DataPostProcessor)
 
-        assert processor._get_rerank_runner("unsupported", "tenant-1", None, None) is None
-        assert processor._get_rerank_runner(RerankMode.WEIGHTED_SCORE, "tenant-1", None, None) is None
+        assert processor._get_rerank_runner("unsupported", "tenant-1", None, None, session=unbound_session) is None
+        assert (
+            processor._get_rerank_runner(RerankMode.WEIGHTED_SCORE, "tenant-1", None, None, session=unbound_session)
+            is None
+        )
 
     def test_get_reorder_runner_by_flag(self):
         processor = DataPostProcessor.__new__(DataPostProcessor)
@@ -176,25 +183,24 @@ class TestDataPostProcessor:
         processor = DataPostProcessor.__new__(DataPostProcessor)
         assert processor._get_rerank_model_instance("tenant-1", None) is None
 
-    def test_get_rerank_model_instance_raises_key_error_for_incomplete_config(self):
+    def test_get_rerank_model_instance_returns_none_for_incomplete_config(self):
         processor = DataPostProcessor.__new__(DataPostProcessor)
 
-        with patch("core.rag.data_post_processor.data_post_processor.ModelManager") as manager_cls:
-            manager_instance = manager_cls.return_value
-            with pytest.raises(KeyError, match="reranking_model_name"):
-                processor._get_rerank_model_instance(
-                    tenant_id="tenant-1",
-                    reranking_model={"reranking_provider_name": "provider-x"},
-                )
+        with patch("core.rag.data_post_processor.data_post_processor.ModelManager.for_tenant") as for_tenant_mock:
+            result = processor._get_rerank_model_instance(
+                tenant_id="tenant-1",
+                reranking_model={"reranking_provider_name": "provider-x"},
+            )
 
-        manager_instance.get_model_instance.assert_not_called()
+        assert result is None
+        for_tenant_mock.assert_called_once_with(tenant_id="tenant-1")
 
     def test_get_rerank_model_instance_success(self):
         processor = DataPostProcessor.__new__(DataPostProcessor)
         model_instance = object()
 
-        with patch("core.rag.data_post_processor.data_post_processor.ModelManager") as manager_cls:
-            manager_instance = manager_cls.return_value
+        with patch("core.rag.data_post_processor.data_post_processor.ModelManager.for_tenant") as for_tenant_mock:
+            manager_instance = for_tenant_mock.return_value
             manager_instance.get_model_instance.return_value = model_instance
 
             result = processor._get_rerank_model_instance(
@@ -206,6 +212,7 @@ class TestDataPostProcessor:
             )
 
         assert result is model_instance
+        for_tenant_mock.assert_called_once_with(tenant_id="tenant-1")
         manager_instance.get_model_instance.assert_called_once_with(
             tenant_id="tenant-1",
             provider="provider-x",
@@ -216,8 +223,8 @@ class TestDataPostProcessor:
     def test_get_rerank_model_instance_handles_authorization_error(self):
         processor = DataPostProcessor.__new__(DataPostProcessor)
 
-        with patch("core.rag.data_post_processor.data_post_processor.ModelManager") as manager_cls:
-            manager_instance = manager_cls.return_value
+        with patch("core.rag.data_post_processor.data_post_processor.ModelManager.for_tenant") as for_tenant_mock:
+            manager_instance = for_tenant_mock.return_value
             manager_instance.get_model_instance.side_effect = InvokeAuthorizationError("not authorized")
 
             result = processor._get_rerank_model_instance(
@@ -229,6 +236,7 @@ class TestDataPostProcessor:
             )
 
         assert result is None
+        for_tenant_mock.assert_called_once_with(tenant_id="tenant-1")
 
 
 class TestReorderRunner:
