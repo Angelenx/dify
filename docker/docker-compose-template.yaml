@@ -1,8 +1,8 @@
 # Shared configuration using YAML anchors and env_file
 x-shared-api-worker-config: &shared-api-worker-config
   build:
-    context: ../api
-    dockerfile: Dockerfile
+    context: ..
+    dockerfile: api/Dockerfile
   env_file:
     - path: ./envs/core-services/shared.env
       required: false
@@ -70,8 +70,8 @@ x-shared-api-worker-config: &shared-api-worker-config
 
 x-shared-worker-config: &shared-worker-config
   build:
-    context: ../api
-    dockerfile: Dockerfile
+    context: ..
+    dockerfile: api/Dockerfile
   env_file:
     - path: ./envs/core-services/shared.env
       required: false
@@ -139,8 +139,8 @@ x-shared-worker-config: &shared-worker-config
 
 x-shared-worker-beat-config: &shared-worker-beat-config
   build:
-    context: ../api
-    dockerfile: Dockerfile
+    context: ..
+    dockerfile: api/Dockerfile
   env_file:
     - path: ./envs/core-services/shared.env
       required: false
@@ -390,8 +390,8 @@ services:
   web:
     image: dify-web:1.17.0
     build:
-      context: ../web
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: web/Dockerfile
     restart: always
     env_file:
       - path: ./envs/core-services/web.env
