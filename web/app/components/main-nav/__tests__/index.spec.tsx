@@ -12,7 +12,6 @@ import type { ReactNode } from 'react'
 import type { Mock } from 'vite-plus/test'
 import type { StepByStepTourSessionState } from '@/app/components/step-by-step-tour/types'
 import type { ModalContextState } from '@/context/modal-context'
-import type { ProviderContextState } from '@/context/provider-context'
 import type { UserProfileWithMeta } from '@/features/account-profile/client'
 import type { ConsoleStateFixture } from '@/test/console/state-fixture'
 import { Dialog, DialogContent, DialogTitle } from '@langgenius/dify-ui/dialog'
@@ -30,10 +29,9 @@ import {
 } from '@/app/components/step-by-step-tour/state'
 import { STEP_BY_STEP_TOUR_SHELL_MODE_STORAGE_KEY } from '@/app/components/step-by-step-tour/storage'
 import { useModalContext } from '@/context/modal-context'
-import { useProviderContext } from '@/context/provider-context'
 import { userProfileQueryOptions } from '@/features/account-profile/client'
 import { usePathname, useRouter } from '@/next/navigation'
-import { consoleQuery } from '@/service/client'
+import { consoleQuery } from '@/service/console'
 import { createConsoleQueryClient, renderWithConsoleQuery } from '@/test/console/query-data'
 import { seedRegisteredConsoleStateFixture } from '@/test/console/state-fixture'
 import { AppModeEnum } from '@/types/app'
@@ -168,11 +166,10 @@ type MainNavConsoleState = ConsoleStateFixture & {
 const mockConsoleState = vi.hoisted(() => ({
   current: undefined as MainNavConsoleState | undefined,
 }))
-const mockProviderContextState = vi.hoisted(() => ({
-  current: {
-    enableSkill: true,
-  } as Partial<ProviderContextState>,
-}))
+let skillEnabled = true
+let educationEnabled = false
+
+vi.mock('@tanstack/react-virtual')
 
 vi.mock('@/features/agent-v2/feature-flag', () => ({
   isAgentV2Enabled: () => mockIsAgentV2Enabled(),
@@ -190,12 +187,6 @@ vi.mock('@/context/permission-state', async () => {
   const { createPermissionStateModuleMock } = await import('@/test/console/state-fixture')
   return createPermissionStateModuleMock(() => mockConsoleState.current ?? {})
 })
-vi.mock('@/context/provider-context', () => ({
-  useProviderContext: vi.fn(),
-  useProviderContextSelector: vi.fn((selector: (state: Partial<ProviderContextState>) => unknown) =>
-    selector(mockProviderContextState.current),
-  ),
-}))
 
 vi.mock('@/context/modal-context', () => ({
   useModalContext: vi.fn(),
@@ -251,8 +242,8 @@ vi.mock('react-i18next', async () => {
   }
 })
 
-vi.mock('@/service/client', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/service/client')>()
+vi.mock('@/service/console', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/service/console')>()
   const currentWorkspaceQueryKey = ['console', 'workspaces', 'current', 'summary', 'get'] as const
   const currentPermissionsQueryKey = [
     ['console', 'workspaces', 'current', 'rbac', 'myPermissions', 'get'],
@@ -462,7 +453,8 @@ const ownerWorkspacePermissionKeys = [
   'dataset.external.connect',
   'tool.manage',
   'mcp.manage',
-  'agent.manage',
+  'agent.acl.preview',
+  'skill.view',
 ]
 
 const datasetOperatorWorkspacePermissionKeys = [
@@ -501,6 +493,7 @@ const mainNavUserProfile = {
   avatar_url: '',
   is_password_set: true,
 }
+const accountMenuAccessibleName = `${mainNavUserProfile.name} common.account.account`
 
 const consoleState: MainNavConsoleState = {
   userProfile: mainNavUserProfile,
@@ -513,7 +506,6 @@ const consoleState: MainNavConsoleState = {
   },
   isCurrentWorkspaceManager: true,
   isCurrentWorkspaceOwner: true,
-  isCurrentWorkspaceEditor: true,
   isCurrentWorkspaceDatasetOperator: false,
   refreshCurrentWorkspace: vi.fn(),
   profileMeta: {
@@ -528,6 +520,7 @@ const consoleState: MainNavConsoleState = {
   isLoadingWorkspacePermissionKeys: false,
   workspacePermissionKeys: ownerWorkspacePermissionKeys,
 }
+const workspaceMenuAccessibleName = /Solar Studio.*common\.mainNav\.workspace\.openMenu/
 
 type MainNavSystemFeatures = Exclude<
   NonNullable<Parameters<typeof renderWithConsoleQuery>[1]>['systemFeatures'],
@@ -599,6 +592,11 @@ const renderMainNav = (
     </JotaiProvider>,
     {
       systemFeatures: resolvedSystemFeatures,
+      features: {
+        billing: { subscription: { plan: 'sandbox' } },
+        enable_skill: skillEnabled,
+        education: { enabled: educationEnabled },
+      },
       educationStatus: options.educationStatus,
       workspacePermissionKeys: currentConsoleState.workspacePermissionKeys,
       queryClient,
@@ -646,15 +644,8 @@ describe('MainNav', () => {
       refresh: vi.fn(),
     })
     mockConsoleState.current = consoleState
-    mockProviderContextState.current = {
-      enableSkill: true,
-    }
-    ;(useProviderContext as Mock).mockReturnValue({
-      enableBilling: true,
-      enableEducationPlan: false,
-      isFetchedPlan: true,
-      plan: { type: 'sandbox' },
-    } as ProviderContextState)
+    skillEnabled = true
+    educationEnabled = false
     ;(useModalContext as Mock).mockReturnValue({
       setShowPricingModal: mockSetShowPricingModal,
     } as unknown as ModalContextState)
@@ -687,7 +678,7 @@ describe('MainNav', () => {
     renderMainNav()
 
     expect(screen.getAllByText('team')).toHaveLength(1)
-    expect(screen.getByRole('button', { name: 'common.account.account' })).not.toHaveTextContent(
+    expect(screen.getByRole('button', { name: accountMenuAccessibleName })).not.toHaveTextContent(
       'team',
     )
     const homeLink = screen.getByRole('link', { name: /common.mainNav.home/ })
@@ -719,7 +710,7 @@ describe('MainNav', () => {
       marketplaceLink.querySelector('.i-custom-vender-main-nav-marketplace-v2'),
     ).toBeInTheDocument()
     expect(
-      within(screen.getByRole('navigation'))
+      within(screen.getByRole('navigation', { name: 'common.navigation.primary' }))
         .getAllByRole('link')
         .map((link) => link.getAttribute('href')),
     ).toEqual([
@@ -745,10 +736,12 @@ describe('MainNav', () => {
     )
   })
 
-  it('hides the roster entry when the user lacks agent.manage', () => {
+  it('hides the roster entry when the user lacks agent.acl.preview', () => {
     mockConsoleState.current = {
       ...consoleState,
-      workspacePermissionKeys: ownerWorkspacePermissionKeys.filter((key) => key !== 'agent.manage'),
+      workspacePermissionKeys: ownerWorkspacePermissionKeys.filter(
+        (key) => key !== 'agent.acl.preview',
+      ),
     }
 
     renderMainNav()
@@ -756,7 +749,7 @@ describe('MainNav', () => {
     expect(screen.queryByRole('link', { name: /Agents/ })).not.toBeInTheDocument()
   })
 
-  it('shows the roster entry when the user has agent.manage', () => {
+  it('shows the roster entry when the user has agent.acl.preview', () => {
     renderMainNav()
 
     expect(screen.getByRole('link', { name: /Agents/ })).toBeInTheDocument()
@@ -771,8 +764,17 @@ describe('MainNav', () => {
   })
 
   it('hides the skills entry when skill is disabled', () => {
-    mockProviderContextState.current = {
-      enableSkill: false,
+    skillEnabled = false
+
+    renderMainNav()
+
+    expect(screen.queryByRole('link', { name: /common.mainNav.skills/ })).not.toBeInTheDocument()
+  })
+
+  it('hides the skills entry when the user lacks skill.view', () => {
+    mockConsoleState.current = {
+      ...consoleState,
+      workspacePermissionKeys: ownerWorkspacePermissionKeys.filter((key) => key !== 'skill.view'),
     }
 
     renderMainNav()
@@ -786,7 +788,7 @@ describe('MainNav', () => {
     renderMainNav()
 
     const tourTrigger = await screen.findByRole('button', { name: 'Open step-by-step tour' })
-    const accountButton = screen.getByRole('button', { name: 'common.account.account' })
+    const accountButton = screen.getByRole('button', { name: accountMenuAccessibleName })
     const helpButton = screen.getByRole('button', { name: 'common.mainNav.help.openMenu' })
 
     expect(tourTrigger.compareDocumentPosition(accountButton)).toBe(
@@ -801,7 +803,7 @@ describe('MainNav', () => {
 
     renderMainNav()
 
-    const accountButton = screen.getByRole('button', { name: 'common.account.account' })
+    const accountButton = screen.getByRole('button', { name: accountMenuAccessibleName })
     expect(accountButton).toHaveTextContent('Evan Z')
     expect(accountButton).toHaveClass('max-w-45', 'gap-3', 'py-1', 'pr-4', 'pl-1')
     expect(accountButton).not.toHaveClass('justify-center', 'p-1')
@@ -816,18 +818,13 @@ describe('MainNav', () => {
   })
 
   it('shows the user education badge in the account popup without adding the workspace plan there', async () => {
-    ;(useProviderContext as Mock).mockReturnValue({
-      enableBilling: true,
-      enableEducationPlan: true,
-      isFetchedPlan: true,
-      plan: { type: 'sandbox' },
-    } as ProviderContextState)
+    educationEnabled = true
 
     renderMainNav(defaultMainNavSystemFeatures, {
       educationStatus: { is_student: true },
     })
 
-    fireEvent.click(screen.getByRole('button', { name: 'common.account.account' }))
+    fireEvent.click(screen.getByRole('button', { name: accountMenuAccessibleName }))
 
     expect(await screen.findByText('EDU')).toBeInTheDocument()
     expect(screen.getByText('evan@example.com')).toBeInTheDocument()
@@ -842,7 +839,6 @@ describe('MainNav', () => {
         role: 'dataset_operator',
       },
       isCurrentWorkspaceDatasetOperator: true,
-      isCurrentWorkspaceEditor: false,
       isCurrentWorkspaceManager: false,
       isCurrentWorkspaceOwner: false,
       workspacePermissionKeys: datasetOperatorWorkspacePermissionKeys,
@@ -879,10 +875,9 @@ describe('MainNav', () => {
         role: 'normal',
       },
       isCurrentWorkspaceDatasetOperator: false,
-      isCurrentWorkspaceEditor: false,
       isCurrentWorkspaceManager: false,
       isCurrentWorkspaceOwner: false,
-      workspacePermissionKeys: ['app_library.access', 'tool.manage', 'agent.manage'],
+      workspacePermissionKeys: ['app_library.access', 'tool.manage', 'agent.acl.preview'],
     }
 
     renderMainNav({ branding: { enabled: false } })
@@ -939,9 +934,7 @@ describe('MainNav', () => {
 
     expect(screen.queryByTestId('app-detail-top')).not.toBeInTheDocument()
     expect(screen.queryByTestId('app-detail-section')).not.toBeInTheDocument()
-    expect(
-      screen.getByRole('button', { name: 'common.mainNav.workspace.openMenu' }),
-    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: workspaceMenuAccessibleName })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /common.menus.apps/ })).toHaveAttribute('href', '/apps')
   })
 
@@ -958,23 +951,24 @@ describe('MainNav', () => {
 
     expect(screen.queryByTestId('dataset-detail-top')).not.toBeInTheDocument()
     expect(screen.queryByTestId('dataset-detail-section')).not.toBeInTheDocument()
-    expect(
-      screen.getByRole('button', { name: 'common.mainNav.workspace.openMenu' }),
-    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: workspaceMenuAccessibleName })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /common.menus.datasets/ })).toHaveAttribute(
       'href',
       '/datasets',
     )
   })
 
-  it('marks marketplace active on marketplace routes', () => {
-    mockPathname = '/marketplace'
+  it.each(['/marketplace', '/plugins', '/templates', '/templates/marketing'])(
+    'marks marketplace active on route %s',
+    (pathname) => {
+      mockPathname = pathname
 
-    renderMainNav()
+      renderMainNav()
 
-    const marketplaceLink = screen.getByRole('link', { name: /common.mainNav.marketplace/ })
-    expect(marketplaceLink).toHaveClass(activeGradientMaskClassName)
-  })
+      const marketplaceLink = screen.getByRole('link', { name: /common.mainNav.marketplace/ })
+      expect(marketplaceLink).toHaveClass(activeGradientMaskClassName)
+    },
+  )
 
   it('marks roster active on roster routes', () => {
     mockPathname = '/agents'
@@ -1172,8 +1166,8 @@ describe('MainNav', () => {
       'common.mainNav.help.learnDify',
       'common.mainNav.help.stepByStepTour',
       'common.userProfile.compliance',
-      'common.userProfile.forum',
-      'common.userProfile.community',
+      'common.userProfile.discord',
+      'common.mainNav.help.creatorCenter',
       'common.userProfile.github',
       'common.userProfile.about',
     ]
@@ -1182,6 +1176,23 @@ describe('MainNav', () => {
     nodes.slice(1).forEach((node, index) => {
       expect(nodes[index]!.compareDocumentPosition(node)).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
     })
+  })
+
+  it('opens Creator Center from the help menu above GitHub', async () => {
+    renderMainNav()
+
+    fireEvent.click(screen.getByRole('button', { name: 'common.mainNav.help.openMenu' }))
+
+    const creatorCenter = await screen.findByRole('menuitem', {
+      name: 'common.mainNav.help.creatorCenter',
+    })
+    const github = screen.getByRole('menuitem', { name: /common\.userProfile\.github/ })
+
+    expect(creatorCenter).toHaveAttribute('href', 'https://creators.dify.ai/')
+    expect(creatorCenter).toHaveAttribute('target', '_blank')
+    expect(creatorCenter).toHaveAttribute('rel', 'noopener noreferrer')
+    expect(creatorCenter.compareDocumentPosition(github)).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
+    expect(creatorCenter.querySelector('.i-ri-user-star-line')).toBeTruthy()
   })
 
   it('opens About from its real Help menu owner and restores focus when closed', async () => {
@@ -1256,7 +1267,7 @@ describe('MainNav', () => {
     fireEvent.click(contactUsItem)
 
     await waitFor(() => {
-      expect(screen.queryByText('common.userProfile.forum')).not.toBeInTheDocument()
+      expect(screen.queryByText('common.userProfile.discord')).not.toBeInTheDocument()
     })
     expect(mockSetShowPricingModal).toHaveBeenCalled()
   })
@@ -1283,15 +1294,15 @@ describe('MainNav', () => {
     fireEvent.click(screen.getByText('billing.upgradeBtn.plain'))
     expect(mockSetShowPricingModal).toHaveBeenCalled()
 
-    fireEvent.click(screen.getByRole('button', { name: 'common.mainNav.workspace.openMenu' }))
+    fireEvent.click(screen.getByRole('button', { name: workspaceMenuAccessibleName }))
     fireEvent.click(await screen.findByText('common.mainNav.workspace.settings'))
     expect(mockSetSettingsDestination).toHaveBeenCalledWith(ACCOUNT_SETTING_TAB.BILLING)
 
-    fireEvent.click(screen.getByRole('button', { name: 'common.mainNav.workspace.openMenu' }))
+    fireEvent.click(screen.getByRole('button', { name: workspaceMenuAccessibleName }))
     fireEvent.click(await screen.findByText('common.mainNav.workspace.inviteMembers'))
     expect(mockSetSettingsDestination).toHaveBeenCalledWith(ACCOUNT_SETTING_TAB.MEMBERS)
 
-    fireEvent.click(screen.getByRole('button', { name: 'common.mainNav.workspace.openMenu' }))
+    fireEvent.click(screen.getByRole('button', { name: workspaceMenuAccessibleName }))
     fireEvent.click(await screen.findByText('Evan Workspace'))
     await waitFor(() => {
       expect(mockSwitchWorkspace).toHaveBeenCalledWith({ body: { tenant_id: 'workspace-2' } })
@@ -1346,7 +1357,7 @@ describe('MainNav', () => {
 
     renderMainNav()
 
-    fireEvent.click(screen.getByRole('button', { name: 'common.mainNav.workspace.openMenu' }))
+    fireEvent.click(screen.getByRole('button', { name: workspaceMenuAccessibleName }))
 
     expect(await screen.findByText('common.mainNav.workspace.settings')).toBeInTheDocument()
     expect(screen.queryByText('common.mainNav.workspace.inviteMembers')).not.toBeInTheDocument()
@@ -1360,7 +1371,6 @@ describe('MainNav', () => {
         role: 'dataset_operator',
       },
       isCurrentWorkspaceDatasetOperator: true,
-      isCurrentWorkspaceEditor: false,
       isCurrentWorkspaceManager: false,
       isCurrentWorkspaceOwner: false,
       workspacePermissionKeys: datasetOperatorWorkspacePermissionKeys,
@@ -1368,7 +1378,7 @@ describe('MainNav', () => {
 
     renderMainNav()
 
-    fireEvent.click(screen.getByRole('button', { name: 'common.mainNav.workspace.openMenu' }))
+    fireEvent.click(screen.getByRole('button', { name: workspaceMenuAccessibleName }))
 
     expect(screen.getByText('common.mainNav.workspace.settings')).toBeInTheDocument()
     expect(screen.queryByText('common.mainNav.workspace.inviteMembers')).not.toBeInTheDocument()
@@ -1428,6 +1438,57 @@ describe('MainNav', () => {
     expect(screen.getByPlaceholderText('common.mainNav.webApps.searchPlaceholder')).toHaveValue(
       'beta',
     )
+  })
+
+  it('announces no installed web app results only after the search settles', async () => {
+    const user = userEvent.setup()
+    let resolveSearch: (() => void) | undefined
+    const searchPending = new Promise<void>((resolve) => {
+      resolveSearch = resolve
+    })
+    mockInstalledApps = [createInstalledApp()]
+    mockInstalledAppsRequest.mockImplementation(async ({ query }: { query: { name?: string } }) => {
+      if (!query.name) {
+        return {
+          installed_apps: mockInstalledApps,
+          has_more: false,
+          next_cursor: null,
+        }
+      }
+
+      await searchPending
+      return {
+        installed_apps: [],
+        has_more: false,
+        next_cursor: null,
+      }
+    })
+
+    renderMainNav()
+
+    const webAppsRegion = await screen.findByRole('region', {
+      name: 'explore.sidebar.webApps',
+    })
+    await user.click(screen.getByRole('button', { name: 'common.operation.search' }))
+    const resultStatus = within(webAppsRegion).getByRole('status')
+    expect(resultStatus).toBeEmptyDOMElement()
+
+    await user.type(screen.getByPlaceholderText('common.mainNav.webApps.searchPlaceholder'), 'z')
+
+    await waitFor(() => {
+      expect(webAppsRegion).toHaveAttribute('aria-busy', 'true')
+    })
+    expect(resultStatus).toBeEmptyDOMElement()
+
+    act(() => {
+      resolveSearch?.()
+    })
+
+    await waitFor(() => {
+      expect(webAppsRegion).toHaveAttribute('aria-busy', 'false')
+      expect(resultStatus).toHaveTextContent('common.mainNav.webApps.noResults')
+    })
+    expect(within(webAppsRegion).getByRole('status')).toBe(resultStatus)
   })
 
   it('hides the installed web apps section while installed apps are loading', () => {
@@ -1616,7 +1677,9 @@ describe('MainNav', () => {
     renderMainNav()
 
     await user.hover(await screen.findByText('Alpha App'))
-    await user.click(screen.getByRole('button', { name: 'common.operation.more' }))
+    await user.click(
+      screen.getByRole('button', { name: /common\.operation\.moreActionsFor.*Alpha App/ }),
+    )
     await user.click(await screen.findByText('explore.sidebar.action.pin'))
 
     await waitFor(() => {
@@ -1627,7 +1690,9 @@ describe('MainNav', () => {
     })
 
     await user.hover(screen.getByText('Alpha App'))
-    await user.click(screen.getByRole('button', { name: 'common.operation.more' }))
+    await user.click(
+      screen.getByRole('button', { name: /common\.operation\.moreActionsFor.*Alpha App/ }),
+    )
     await user.click(await screen.findByText('explore.sidebar.action.delete'))
     await user.click(await screen.findByText('common.operation.confirm'))
 
