@@ -10,6 +10,8 @@
 **/.ruff_cache
 .git
 .github
+docker/volumes
+docker/*.tar.gz
 *.md
 !web/README.md
 !api/README.md
