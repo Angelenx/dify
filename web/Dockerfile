@@ -6,11 +6,13 @@ LABEL maintainer="takatost@gmail.com"
 # if you located in China, you can use aliyun mirror to speed up
 RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
 
-# Huawei Cloud npm is more stable than npmmirror under high concurrency.
-ENV npm_config_registry=https://mirrors.huaweicloud.com/repository/npm/
+# npmmirror is faster for package metadata from this build host.
+# COREPACK_NPM_REGISTRY must not have a trailing slash, or npmmirror 404s.
+ENV npm_config_registry=https://registry.npmmirror.com/
 ENV npm_config_disturl=https://npmmirror.com/mirrors/node
 ENV NODEJS_ORG_MIRROR=https://npmmirror.com/mirrors/node
-RUN npm config set registry https://mirrors.huaweicloud.com/repository/npm/
+ENV COREPACK_NPM_REGISTRY=https://registry.npmmirror.com
+RUN npm config set registry https://registry.npmmirror.com/
 
 RUN apk add --no-cache tzdata
 RUN corepack enable
@@ -33,7 +35,7 @@ COPY packages /app/packages
 
 # Use packageManager from package.json
 RUN corepack install
-RUN pnpm config set registry https://mirrors.huaweicloud.com/repository/npm/ \
+RUN pnpm config set registry https://registry.npmmirror.com/ \
     && pnpm config set network-concurrency 4 \
     && pnpm config set fetch-retries 8 \
     && pnpm config set fetch-retry-mintimeout 20000 \
